@@ -1,0 +1,2182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>Cyberpunk Collab Crashers!</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+        rel="stylesheet"
+    />
+    <style>
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background-color: #1a1a1a;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden; /* Prevent scrolling on mobile */
+        }
+        canvas {
+            /* Background will be dynamically set by JS for day/night */
+            display: block;
+            border-radius: 12px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2), 0 6px 6px rgba(0,0,0,0.25);
+            touch-action: none; /* Disable default touch actions like pinch-zoom */
+        }
+        #message-box {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.9); /* Darker background */
+            color: white;
+            padding: 30px 60px; /* Larger padding */
+            border-radius: 20px; /* More rounded */
+            font-size: 1.8em; /* Larger font */
+            text-align: center;
+            z-index: 100;
+            display: none; /* Initially hidden */
+            border: 4px solid #ff0000; /* Thicker border */
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.7); /* Glow effect for message box */
+        }
+        #intro-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.95);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 150;
+            text-align: center;
+        }
+        #intro-screen .intro-title {
+            font-size: 3.5em; /* Much larger */
+            color: #FF00FF; /* Magenta */
+            text-shadow: 0 0 15px #FF00FF, 0 0 30px #FF00FF; /* Stronger glow */
+            margin-bottom: 20px;
+            animation: pulse-glow 2s infinite alternate; /* Add a subtle pulse */
+        }
+
+        @keyframes pulse-glow {
+            from { text-shadow: 0 0 15px #FF00FF, 0 0 30px #FF00FF; }
+            to { text-shadow: 0 0 25px #FF00FF, 0 0 50px #FF00FF; }
+        }
+
+        #intro-screen p {
+            font-size: 1.2em;
+            margin-bottom: 30px;
+        }
+        #start-button {
+            background-color: #FF0000;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.5em;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(255, 0, 0, 0.5);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease;
+            position: relative; /* For pseudo-element glow */
+            overflow: hidden; /* Hide overflow of pseudo-element */
+        }
+        #start-button:hover {
+            transform: translateY(-3px) scale(1.05); /* Slight lift and scale */
+            box-shadow: 0 8px 25px rgba(255, 0, 0, 0.8), 0 0 40px rgba(255, 0, 0, 0.5); /* Enhanced glow */
+            background-color: #FF3333; /* Slightly lighter red */
+        }
+        #start-button::before { /* Inner glow effect */
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, transparent 70%);
+            transform: rotate(45deg);
+            transition: transform 0.5s ease-in-out;
+            opacity: 0;
+        }
+        #start-button:hover::before {
+            transform: rotate(0deg);
+            opacity: 1;
+        }
+
+        /* Styles for the on-screen touch controls - SMALLER & SLEEKER */
+        .touch-controls {
+            position: absolute;
+            bottom: 10px; /* Closer to bottom */
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 10px; /* Less padding */
+            box-sizing: border-box;
+            z-index: 50;
+        }
+        .touch-btn {
+            background-color: rgba(0, 0, 0, 0.7); /* Slightly more opaque */
+            color: #00FFFF; /* Neon Cyan color */
+            border: 1px solid #00FFFF; /* Thin neon border */
+            border-radius: 5px; /* Slightly squarer, more techy */
+            width: 45px; /* Smaller buttons */
+            height: 45px; /* Smaller buttons */
+            font-size: 16px; /* Adjusted font size for smaller buttons */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-user-select: none;
+            box-shadow: 0 0 5px rgba(0, 255, 255, 0.7); /* Sharper, smaller glow */
+            transition: background-color 0.1s ease, box-shadow 0.1s ease;
+        }
+        .touch-btn:active {
+            background-color: rgba(0, 255, 255, 0.3);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 1);
+        }
+        #limit-break-btn {
+            background-color: rgba(255, 0, 255, 0.7); /* Opaque Magenta for Limit Break */
+            color: white;
+            border: 1px solid #FF00FF; /* Thin magenta border */
+            border-radius: 5px; /* Consistent with other buttons */
+            width: 55px; /* Slightly larger */
+            height: 45px; /* Same height as others */
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-user-select: none;
+            box-shadow: 0 0 8px rgba(255, 0, 255, 0.9); /* Stronger magenta glow */
+            transition: transform 0.1s ease, background-color 0.1s ease, box-shadow 0.1s ease;
+        }
+        #limit-break-btn:active {
+            transform: scale(0.95);
+            background-color: rgba(255, 0, 255, 0.4);
+            box-shadow: 0 0 15px rgba(255, 0, 255, 1);
+        }
+        #limit-break-btn.disabled {
+            opacity: 0.4; /* More dimmed when disabled */
+            cursor: not-allowed;
+            box-shadow: none;
+            background-color: rgba(255, 0, 255, 0.2); /* Even more muted */
+        }
+        /* HUD Overlay - SMALLER & MINIMALIST */
+        #ui-overlay {
+            position: absolute;
+            top: 5px; /* Closer to top edge */
+            left: 5px; /* Closer to left edge */
+            width: auto; /* Auto width */
+            display: flex;
+            flex-direction: column;
+            gap: 3px; /* Smaller gap */
+            z-index: 60;
+            pointer-events: none;
+            padding: 5px; /* Small padding around bar if needed */
+        }
+        #limit-break-bar-container {
+            width: 150px; /* Smaller width */
+            height: 15px; /* Smaller height */
+            background-color: rgba(0, 0, 0, 0.8); /* Darker background */
+            border: 1px solid #FF00FF; /* Thin magenta border */
+            border-radius: 3px; /* Sharper corners */
+            overflow: hidden;
+            box-shadow: 0 0 5px rgba(255, 0, 255, 0.7); /* Subtle magenta glow */
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+        #limit-break-bar {
+            height: 100%;
+            width: 0%;
+            background-color: #FF00FF; /* Magenta fill */
+            transition: width 0.1s linear;
+        }
+        #limit-break-text {
+            position: absolute;
+            left: 160px; /* Position to the right of the bar */
+            color: white;
+            font-size: 0.7em;
+            text-shadow: 0 0 8px #FF00FF, 0 0 3px #FF00FF; /* Stronger glow */
+            pointer-events: none; /* Ensure it doesn't block clicks */
+            white-space: nowrap; /* Prevent text from wrapping */
+        }
+        #boss-health-bar-container {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 200px;
+            height: 20px;
+            background-color: rgba(0, 0, 0, 0.8);
+            border: 2px solid #FF0000;
+            border-radius: 5px;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.7);
+            z-index: 60;
+            display: none; /* Initially hidden */
+        }
+        #boss-health-bar {
+            height: 100%;
+            width: 100%;
+            background-color: #FF0000;
+            transition: width 0.1s linear;
+        }
+
+        /* Debug info styles */
+        #debug-info {
+            position: absolute;
+            bottom: 60px; /* Above touch controls */
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #00FF00;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            z-index: 70;
+            pointer-events: none;
+        }
+
+        #game-tip-box {
+            position: absolute;
+            top: 20px; /* Position at the top */
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #00FFFF; /* Neon cyan */
+            padding: 15px 25px;
+            border-radius: 8px;
+            font-size: 1.1em;
+            text-align: center;
+            z-index: 110;
+            display: none; /* Initially hidden */
+            border: 2px solid #00FFFF;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.7);
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+
+        @media (min-width: 768px) {
+            .touch-controls {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex flex-col items-center justify-center min-h-screen p-4">
+
+    <h1 class="text-3xl md:text-4xl mb-4 text-center">Cyberpunk Collab Crashers!</h1>
+    <p class="mb-4 text-center text-sm md:text-base">
+        Keyboard: Arrows/AD to Move, Space to Jump, **K to Slash!**, **L for Limit Break!**<br />
+        Mobile: Use on-screen buttons!
+    </p>
+
+    <div id="game-container" class="w-full max-w-6xl aspect-video relative">
+        <canvas id="gameCanvas"></canvas>
+        <!-- Modified message box text -->
+        <div id="message-box">Victory - You have attained entry into the Sphere!</div>
+
+        <div id="intro-screen">
+            <h2 class="intro-title">Cyberpunk Collab Crashers!</h2>
+            <p>Welcome to Cyberpunk Collab Crashers!<br>Collect all the brand logos and reach the flag!</p>
+            <button id="start-button">START GAME</button>
+        </div>
+
+        <div id="ui-overlay">
+            <div id="limit-break-bar-container">
+                <div id="limit-break-bar"></div>
+                <span id="limit-break-text">LIMIT BREAK</span>
+            </div>
+        </div>
+
+        <div id="boss-health-bar-container">
+            <div id="boss-health-bar"></div>
+        </div>
+
+        <div id="debug-info">
+            Collectibles Left: <span id="collectibles-left"></span><br>
+            Boss Active: <span id="boss-active"></span>
+        </div>
+
+        <div id="game-tip-box">
+            Collect all brand logos to summon the Boss!
+        </div>
+
+        <div class="touch-controls">
+            <div class="flex gap-4">
+                <button id="left-btn" class="touch-btn">◀</button>
+                <button id="right-btn" class="touch-btn">▶</button>
+            </div>
+            <button id="slash-btn" class="touch-btn">⚔️</button> <button id="limit-break-btn">LB</button> <button id="jump-btn" class="touch-btn">▲</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const messageBox = document.getElementById('message-box');
+        const introScreen = document.getElementById('intro-screen');
+        const startButton = document.getElementById('start-button');
+        const gameContainer = document.getElementById('game-container');
+        const limitBreakBar = document.getElementById('limit-break-bar');
+        const limitBreakBtn = document.getElementById('limit-break-btn');
+        const bossHealthBarContainer = document.getElementById('boss-health-bar-container');
+        const bossHealthBar = document.getElementById('boss-health-bar');
+        const collectiblesLeftDisplay = document.getElementById('collectibles-left');
+        const bossActiveDisplay = document.getElementById('boss-active');
+        const gameTipBox = document.getElementById('game-tip-box'); // New element
+        const limitBreakText = document.getElementById('limit-break-text'); // New element for text
+
+        let isGameWon = false;
+        let gameStarted = false;
+
+        // --- Game World Settings ---
+        const worldWidth = 20000; // Increased world length for longer game
+        const gameWorld = {
+            width: 1400, // Increased for a more zoomed-out view
+            height: 787.5  // Maintain 16:9 aspect (1400 / 16 * 9)
+        };
+        const groundBaseHeight = 150; // Base height of the ground within the gameWorld.height
+        const gravity = 0.6;
+
+        // --- Terrain Data ---
+        const terrain = [];
+        const terrainSegmentLength = 100;
+        const maxTerrainHeightVariation = 250; // Increased for more dynamic hills at zoom
+
+        // --- Day-Night Cycle ---
+        let gameTime = 0; // Increments to control day/night cycle
+        const cycleDuration = 3000; // Frames for a full day/night cycle (approx 50 seconds at 60fps)
+        const sunriseStartRatio = 0.15; // When sunrise starts (e.g., 15% into cycle)
+        const sunriseEndRatio = 0.25; // When sunrise ends (e.g., 25% into cycle)
+        const blindingLightDuration = 10; // Frames for blinding light flash (very short)
+        let blindingLightTimer = 0;
+        let lightningFlashTimer = 0;
+        const lightningMaxDuration = 5; // Frames for lightning flash
+        const lightningMinDelay = 300; // Min frames between lightning strikes
+        const lightningMaxDelay = 900; // Max frames between lightning strikes
+        let nextLightningStrike = Math.random() * (lightningMaxDelay - lightningMinDelay) + lightningMinDelay;
+
+        // --- Rain ---
+        const maxRainDrops = 300;
+        const rainDrops = [];
+        let isRaining = false;
+        const rainStartCycleRatio = 0.7; // Start raining around dusk/night
+        const rainEndCycleRatio = 0.1;   // Stop raining before morning
+
+        // --- Background Buildings (Parallax) ---
+        const backgroundLayers = [
+            { speed: 0.1, color: '#0A0A1A', buildings: [] }, // Farthest, darkest, slowest
+            { speed: 0.3, color: '#1B1B30', buildings: [] }, // Mid-ground
+            { speed: 0.5, color: '#2C2C45', buildings: [] }  // Closer, fastest
+        ];
+
+        // --- New: Trains ---
+        const trains = [];
+        const trainTrackY = 200; // Y-coordinate for the elevated train track
+        const trainMinSpeed = 5;
+        const trainMaxSpeed = 15;
+        const trainSegmentWidth = 60;
+        const trainSegmentHeight = 30;
+        const trainGap = 10;
+
+        // --- Enemies ---
+        const enemies = [];
+        const maxEnemies = 10;
+        const enemySpawnInterval = 300; // Frames between potential enemy spawns
+        let enemySpawnTimer = 0;
+
+        // --- Platforms (Removed for now) ---
+        const platforms = []; // Keep the array, but it will remain empty
+
+        // --- Limit Break ---
+        let limitBreakCharge = 0;
+        const maxLimitBreakCharge = 100;
+        const limitBreakSlashCount = 10; // More slashes during limit break
+        const limitBreakSlashInterval = 2; // Faster slashes
+        let limitBreakActive = false;
+        let currentLimitBreakSlash = 0;
+        let limitBreakSlashTimer = 0;
+        let limitBreakEffects = false; // Controls extra flashy effects
+        let flashCounter = 0;
+        let shakeOffset = { x: 0, y: 0 };
+
+
+        // --- Audio Context for SFX (modern approach) ---
+        let audioContext;
+
+        // Function to generate a "whoosh" sound for Limit Break
+        function playWhooshSound(duration = 0.2, startFreq = 2000, endFreq = 500, volume = 0.7) {
+            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.type = 'sawtooth'; // A sharper wave for whoosh
+            oscillator.frequency.setValueAtTime(startFreq, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(endFreq, audioContext.currentTime + duration);
+
+            gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration); // Fade out
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
+        // Function to generate a "giggle" sound for Boss Laugh
+        function playGiggleSound(duration = 0.5, volume = 0.4) {
+            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+            const primaryOsc = audioContext.createOscillator();
+            const secondaryOsc = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            primaryOsc.connect(gainNode);
+            secondaryOsc.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            primaryOsc.type = 'sine';
+            secondaryOsc.type = 'triangle';
+
+            // Base frequencies
+            primaryOsc.frequency.value = 300;
+            secondaryOsc.frequency.value = 450;
+
+            // Add some vibrato/wobble for a "giggling" effect
+            const wobbleAmount = 50;
+            const wobbleSpeed = 10; // Hz
+            const lfo = audioContext.createOscillator();
+            lfo.frequency.value = wobbleSpeed;
+            const lfoGain = audioContext.createGain();
+            lfoGain.gain.value = wobbleAmount;
+            lfo.connect(lfoGain);
+            lfoGain.connect(primaryOsc.frequency);
+            lfoGain.connect(secondaryOsc.frequency);
+            lfo.start(audioContext.currentTime);
+            lfo.stop(audioContext.currentTime + duration + 0.1); // Stop LFO slightly after main sound
+
+            gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+
+            primaryOsc.start(audioContext.currentTime);
+            secondaryOsc.start(audioContext.currentTime);
+            primaryOsc.stop(audioContext.currentTime + duration);
+            secondaryOsc.stop(audioContext.currentTime + duration);
+        }
+
+        // New: Function to generate a slashing sound
+        function playSlashSound(duration = 0.1, freq = 1500, volume = 0.6) {
+            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.type = 'square'; // Sharp, digital sound
+            oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(freq * 0.5, audioContext.currentTime + duration); // Pitch bend down
+
+            gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
+        // New: Function to generate a damage sound
+        function playDamageSound(duration = 0.2, freq = 100, volume = 0.8) {
+            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.type = 'sawtooth'; // Rougher sound
+            oscillator.frequency.setValueAtTime(freq, audioContext.currentTime);
+            oscillator.frequency.linearRampToValueAtTime(freq * 0.7, audioContext.currentTime + duration); // Slight pitch drop
+
+            gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
+
+        async function initAudio() {
+            // AudioContext is initialized on first sound playback.
+            console.log('Audio initialization complete. Sounds are ready to be played directly.');
+        }
+
+        // --- Helper: Convert HSL to Hex (for dynamic colors) ---
+        function hslToHex(h, s, l) {
+            l /= 100;
+            const a = s * Math.min(l, 1 - l) / 100;
+            const f = n => {
+                const k = (n + h / 30) % 12;
+                const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+                return Math.round(255 * color).toString(16).padStart(2, '0');
+            };
+            return `#${f(0)}${f(8)}${f(4)}`;
+        }
+
+
+        // --- Resize Canvas ---
+        function resizeCanvas() {
+            const containerWidth = gameContainer.clientWidth;
+            canvas.width = containerWidth;
+            canvas.height = containerWidth * (9 / 16); // Maintain 16:9 aspect ratio
+            if (gameStarted) {
+                generateTerrain();
+                // Player Y position will be adjusted by update loop based on ground/platforms
+                createCollectibles();
+            }
+            initRain(); // Re-initialize rain for new canvas size
+            generateBuildings(); // Re-generate buildings for new canvas size
+            generateTrains(); // Re-generate trains
+            // generatePlatforms(); // No longer needed as platforms are removed
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        // --- Player (YouTube Logo - Cyberpunk style) ---
+        const player = {
+            x: 100,
+            y: 0,
+            width: 80,
+            height: 56,
+            speed: 6,
+            dx: 0,
+            dy: 0,
+            onGround: false,
+            sizeMultiplier: 1,
+            glowIntensity: 0,
+            hasSword: true,
+            isSlashing: false,
+            slashFrame: 0,
+            slashDuration: 10,
+            hitboxOffsetX: 0, // Sword slash hitbox X offset
+            hitboxOffsetY: 0, // Sword slash hitbox Y offset
+            hitboxWidth: 100, // Sword slash hitbox width
+            hitboxHeight: 50, // Sword slash hitbox height
+            wheelRotation: 0, // Added for wheel animation
+            wheelSpeed: 0.1, // Added for wheel animation speed
+
+            draw() {
+                const w = this.width * this.sizeMultiplier;
+                const h = this.height * this.sizeMultiplier;
+
+                // Player glow
+                if (this.glowIntensity > 0) {
+                    ctx.shadowBlur = this.glowIntensity * 8;
+                    ctx.shadowColor = `rgba(0, 255, 255, ${this.glowIntensity})`; // Neon blue glow
+                }
+
+                // Cyberpunk YouTube Icon (more angular, glowing accents)
+                ctx.fillStyle = '#FF0000'; // Base red
+                ctx.beginPath();
+                const cornerBevel = w * 0.1;
+                ctx.moveTo(this.x + cornerBevel, this.y);
+                ctx.lineTo(this.x + w - cornerBevel, this.y);
+                ctx.lineTo(this.x + w, this.y + cornerBevel);
+                ctx.lineTo(this.x + w, this.y + h - cornerBevel);
+                ctx.lineTo(this.x + w - cornerBevel, this.y + h);
+                ctx.lineTo(this.x + cornerBevel, this.y + h);
+                ctx.lineTo(this.x, this.y + h - cornerBevel);
+                ctx.lineTo(this.x, this.y + cornerBevel);
+                ctx.closePath();
+                ctx.fill();
+
+                // Inner glowing lines (example)
+                ctx.strokeStyle = '#00FFFF'; // Cyan/Neon Blue
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(this.x + w * 0.2, this.y + h * 0.2);
+                ctx.lineTo(this.x + w * 0.8, this.y + h * 0.2);
+                ctx.moveTo(this.x + w * 0.2, this.y + h * 0.8);
+                ctx.lineTo(this.x + w * 0.8, this.y + h * 0.8);
+                ctx.stroke();
+
+                // White play triangle (still present)
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.moveTo(this.x + w * 0.4, this.y + h * 0.25);
+                ctx.lineTo(this.x + w * 0.7, this.y + h * 0.5);
+                ctx.lineTo(this.x + w * 0.4, this.y + h * 0.75);
+                ctx.closePath();
+                ctx.fill();
+
+                // Draw Cyberpunk Samurai Sword
+                if (this.hasSword) {
+                    const swordLength = w * 1.2;
+                    const hiltLength = w * 0.2;
+                    const bladeWidth = w * 0.05;
+
+                    ctx.save();
+                    ctx.translate(this.x + w / 2, this.y + h / 2);
+
+                    let angle = 0;
+                    let swordOffsetX = w * 0.4;
+                    let swordOffsetY = h * 0.1;
+
+                    if (this.isSlashing) {
+                        const slashProgress = this.slashFrame / this.slashDuration;
+                        angle = -Math.PI * 0.8 * slashProgress;
+                        swordOffsetX = w * 0.3;
+                        swordOffsetY = h * 0.2;
+
+                        // Calculate sword hitbox based on player position and sword orientation
+                        this.hitboxOffsetX = this.x + w / 2 + swordOffsetX * Math.cos(angle) - this.hitboxWidth / 2;
+                        this.hitboxOffsetY = this.y + h / 2 + swordOffsetY * Math.sin(angle) - this.hitboxHeight / 2;
+
+                    } else {
+                        angle = Math.PI / 8;
+                        swordOffsetX = w * 0.45;
+                        swordOffsetY = h * 0.05;
+                        this.hitboxOffsetX = -9999; // Move hitbox off-screen when not slashing
+                        this.hitboxOffsetY = -9999;
+                    }
+
+                    ctx.rotate(angle);
+
+                    // Hilt (handle)
+                    ctx.fillStyle = '#444444';
+                    ctx.fillRect(swordOffsetX, swordOffsetY, hiltLength, bladeWidth * 2);
+
+                    // Blade
+                    ctx.fillStyle = '#222222';
+                    ctx.strokeStyle = '#00FFFF';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath();
+                    ctx.moveTo(swordOffsetX + hiltLength, swordOffsetY + bladeWidth / 2);
+                    ctx.lineTo(swordOffsetX + hiltLength + swordLength, swordOffsetY + bladeWidth / 2);
+                    ctx.lineTo(swordOffsetX + hiltLength + swordLength - bladeWidth, swordOffsetY + bladeWidth * 1.5);
+                    ctx.lineTo(swordOffsetX + hiltLength, swordOffsetY + bladeWidth);
+                    ctx.closePath();
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.restore();
+                }
+
+                // --- Draw Wheels ---
+                const wheelRadius = w * 0.15; // Radius of the wheels
+                const wheelOffset = w * 0.3; // Increased distance from center of player to center of wheel
+                const wheelThickness = w * 0.08; // Thickness of the wheels
+
+                const groundYAtPlayerCenter = getGroundY(this.x + w / 2);
+                const wheelY = this.y + h - wheelRadius * 0.7; // Position wheels slightly overlapping player body
+
+                ctx.strokeStyle = '#000000'; // Black for outer ring
+                ctx.lineWidth = 4; // Thicker border
+
+                // Front Wheel
+                ctx.save();
+                ctx.translate(this.x + w / 2 + wheelOffset, wheelY);
+                ctx.rotate(this.wheelRotation);
+                ctx.beginPath();
+                ctx.arc(0, 0, wheelRadius, 0, Math.PI * 2);
+                ctx.stroke(); // Draw black outer ring
+                ctx.fillStyle = '#FF0000'; // Red for inner part
+                ctx.beginPath();
+                ctx.arc(0, 0, wheelRadius - ctx.lineWidth / 2, 0, Math.PI * 2); // Draw smaller inner circle
+                ctx.fill();
+                ctx.restore();
+
+                // Back Wheel
+                ctx.save();
+                ctx.translate(this.x + w / 2 - wheelOffset, wheelY);
+                ctx.rotate(this.wheelRotation);
+                ctx.beginPath();
+                ctx.arc(0, 0, wheelRadius, 0, Math.PI * 2);
+                ctx.stroke(); // Draw black outer ring
+                ctx.fillStyle = '#FF0000'; // Red for inner part
+                ctx.beginPath();
+                ctx.arc(0, 0, wheelRadius - ctx.lineWidth / 2, 0, Math.PI * 2); // Draw smaller inner circle
+                ctx.fill();
+                ctx.restore();
+
+                ctx.shadowBlur = 0;
+                ctx.shadowColor = 'transparent';
+            },
+
+            slashSword() {
+                if (!this.isSlashing) {
+                    this.isSlashing = true;
+                    this.slashFrame = 0;
+                    playSlashSound(); // Play slash sound
+                }
+            },
+
+            // This function triggers visual slashes for Limit Break
+            multiSlash() {
+                if (limitBreakActive) {
+                    this.slashSword(); // Trigger the regular slash animation
+                    playWhooshSound(); // Play limit break sound
+                }
+            }
+        };
+
+        // --- Collectibles (Cyberpunk Brand Logos) ---
+        const collectibles = [];
+        const logoData = [
+            { name: 'Google', draw: (x, y, s) => {
+                ctx.fillStyle = '#4285F4'; // Blue
+                ctx.fillRect(x, y, s, s);
+                ctx.fillStyle = '#EA4335'; // Red
+                ctx.beginPath(); ctx.arc(x + s/2, y + s/2, s * 0.4, 0, Math.PI * 2); ctx.fill(); // Circle for G
+                ctx.strokeStyle = '#34A853'; // Green glow
+                ctx.lineWidth = 3;
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = '#34A853';
+                ctx.beginPath(); ctx.arc(x + s/2, y + s/2, s * 0.4, 0, Math.PI * 2); ctx.stroke();
+            }},
+            { name: 'Facebook', draw: (x, y, s) => {
+                ctx.fillStyle = '#1877F2'; // Blue
+                ctx.fillRect(x, y, s, s);
+                ctx.fillStyle = 'white';
+                ctx.font = `bold ${s*0.8}px 'Press Start 2P'`; // Using game font
+                ctx.fillText('F', x + s*0.25, y + s*0.75);
+                ctx.strokeStyle = '#00FFFF'; // Neon Cyan glow
+                ctx.lineWidth = 3;
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = '#00FFFF';
+                ctx.strokeRect(x, y, s, s);
+            }},
+            { name: 'Amazon', draw: (x, y, s) => {
+                ctx.fillStyle = '#232F3E'; // Dark Blue
+                ctx.fillRect(x, y, s, s);
+                ctx.strokeStyle = '#FF9900'; // Orange glow
+                ctx.lineWidth = 4;
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = '#FF9900';
+                ctx.beginPath(); ctx.moveTo(x + s * 0.2, y + s * 0.8);
+                ctx.quadraticCurveTo(x + s * 0.5, y + s * 0.5, x + s * 0.8, y + s * 0.8);
+                ctx.stroke(); // Curved line for smile/arrow
+            }},
+            { name: 'Netflix', draw: (x, y, s) => {
+                ctx.fillStyle = '#000000'; ctx.fillRect(x, y, s, s);
+                ctx.fillStyle = '#E50914'; // Red
+                ctx.font = `bold ${s*1.1}px 'Press Start 2P'`;
+                ctx.fillText('N', x + s*0.2, y + s*0.85);
+                ctx.strokeStyle = '#FF00FF'; // Magenta glow
+                ctx.lineWidth = 3;
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = '#FF00FF';
+                ctx.strokeRect(x, y, s, s);
+            }},
+            { name: 'Spotify', draw: (x, y, s) => {
+                ctx.fillStyle = '#1DB954'; // Green
+                ctx.beginPath(); ctx.arc(x+s/2, y+s/2, s/2, 0, 2*Math.PI); ctx.fill();
+                ctx.strokeStyle = '#00FF00'; // Green glow
+                ctx.lineWidth = 3;
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = '#00FF00';
+                for(let i=0; i<3; i++) {
+                    ctx.beginPath(); ctx.arc(x+s/2, y+s/2, s*(0.15 + i*0.1), 1.2*Math.PI, 1.8*Math.PI); ctx.stroke();
+                }
+            }},
+            // Added new popular brand logos
+            { name: 'Apple', draw: (x, y, s) => {
+                ctx.fillStyle = '#A2AAAD'; // Apple gray
+                ctx.beginPath();
+                ctx.arc(x + s / 2, y + s * 0.45, s * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(x + s * 0.65, y + s * 0.15, s * 0.15, 0, Math.PI * 2);
+                ctx.fill(); // Leaf
+                ctx.strokeStyle = '#FFFFFF'; // White glow
+                ctx.lineWidth = 3;
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = '#FFFFFF';
+                ctx.beginPath();
+                ctx.arc(x + s / 2, y + s / 2, s * 0.45, 0, Math.PI * 2);
+                ctx.stroke();
+            }},
+            { name: 'Microsoft', draw: (x, y, s) => {
+                ctx.fillStyle = '#F25022'; // Red
+                ctx.fillRect(x + s * 0.1, y + s * 0.1, s * 0.35, s * 0.35);
+                ctx.fillStyle = '#7FBA00'; // Green
+                ctx.fillRect(x + s * 0.55, y + s * 0.1, s * 0.35, s * 0.35);
+                ctx.fillStyle = '#00A4EF'; // Blue
+                ctx.fillRect(x + s * 0.1, y + s * 0.55, s * 0.35, s * 0.35);
+                ctx.fillStyle = '#FFB900'; // Yellow
+                ctx.fillRect(x + s * 0.55, y + s * 0.55, s * 0.35, s * 0.35);
+                ctx.strokeStyle = '#000000'; // Black outline
+                ctx.lineWidth = 2;
+                ctx.shadowBlur = 5;
+                ctx.shadowColor = '#00FFFF'; // Cyan glow
+                ctx.strokeRect(x + s * 0.1, y + s * 0.1, s * 0.8, s * 0.8);
+            }},
+            { name: 'Twitter', draw: (x, y, s) => {
+                ctx.fillStyle = '#1DA1F2'; // Twitter blue
+                ctx.beginPath();
+                ctx.moveTo(x + s * 0.2, y + s * 0.4);
+                ctx.quadraticCurveTo(x + s * 0.3, y + s * 0.2, x + s * 0.8, y + s * 0.2);
+                ctx.quadraticCurveTo(x + s * 0.7, y + s * 0.5, x + s * 0.8, y + s * 0.8);
+                ctx.quadraticCurveTo(x + s * 0.5, y + s * 0.7, x + s * 0.2, y + s * 0.8);
+                ctx.quadraticCurveTo(x + s * 0.3, y + s * 0.6, x + s * 0.2, y + s * 0.4);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#00FFFF'; // Neon Cyan glow
+                ctx.lineWidth = 3;
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = '#00FFFF';
+                ctx.stroke();
+            }},
+            { name: 'Starbucks', draw: (x, y, s) => {
+                ctx.fillStyle = '#00704A'; // Starbucks green
+                ctx.beginPath();
+                ctx.arc(x + s / 2, y + s / 2, s * 0.45, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#FFFFFF'; // White inner circle
+                ctx.beginPath();
+                ctx.arc(x + s / 2, y + s / 2, s * 0.3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#00704A'; // Green siren
+                ctx.beginPath();
+                ctx.arc(x + s / 2, y + s / 2, s * 0.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#FFFFFF'; // White glow
+                ctx.lineWidth = 3;
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = '#FFFFFF';
+                ctx.beginPath();
+                ctx.arc(x + s / 2, y + s / 2, s * 0.45, 0, Math.PI * 2);
+                ctx.stroke();
+            }},
+            { name: 'Nike', draw: (x, y, s) => {
+                ctx.fillStyle = '#000000'; // Black
+                ctx.beginPath();
+                ctx.moveTo(x + s * 0.1, y + s * 0.5);
+                ctx.quadraticCurveTo(x + s * 0.4, y + s * 0.8, x + s * 0.9, y + s * 0.2);
+                ctx.lineTo(x + s * 0.8, y + s * 0.1);
+                ctx.quadraticCurveTo(x + s * 0.3, y + s * 0.7, x + s * 0.1, y + s * 0.5);
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#FF0000'; // Red glow
+                ctx.lineWidth = 3;
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = '#FF0000';
+                ctx.stroke();
+            }},
+        ];
+
+        function createCollectibles() {
+            collectibles.length = 0;
+            const numCollectibles = 10; // Increased number of collectibles for longer game
+            // Spawn collectibles over a wider range now that the world is longer
+            const spawnStartX = player.x + 200;
+            const spawnRange = worldWidth - 400;
+            const spacing = spawnRange / (numCollectibles - 1);
+
+            for (let i = 0; i < numCollectibles; i++) {
+                const collectibleX = spawnStartX + i * spacing + (Math.random() - 0.5) * 100; // More random offset
+                const groundYAtCollectible = getGroundY(collectibleX);
+                collectibles.push({
+                    x: collectibleX,
+                    y: groundYAtCollectible - 60 - Math.random() * 80,
+                    size: 50,
+                    active: true,
+                    draw: logoData[i % logoData.length].draw // Cycle through all available logos
+                });
+            }
+        }
+
+        // --- Enemy Drone ---
+        class Enemy {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 40;
+                this.height = 40;
+                this.speed = 2 + Math.random();
+                this.direction = Math.random() < 0.5 ? 1 : -1;
+                this.active = true;
+                this.drawGlow = 0;
+            }
+
+            update() {
+                if (!this.active) return;
+                this.x += this.speed * this.direction;
+
+                if (this.x < 100 || this.x > worldWidth - 100) {
+                    this.direction *= -1;
+                }
+                this.y = getGroundY(this.x + this.width / 2) - this.height;
+
+                if (this.drawGlow > 0) {
+                    this.drawGlow -= 0.05;
+                    if (this.drawGlow < 0) this.drawGlow = 0;
+                }
+            }
+
+            draw() {
+                if (!this.active) return;
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                if (this.drawGlow > 0) {
+                    ctx.shadowBlur = this.drawGlow * 15;
+                    ctx.shadowColor = `rgba(255, 0, 255, ${this.drawGlow})`;
+                }
+
+                ctx.fillStyle = '#666666';
+                ctx.fillRect(0, 0, this.width, this.height);
+
+                ctx.fillStyle = '#00FFFF';
+                ctx.fillRect(this.width * 0.1, this.height * 0.1, this.width * 0.2, this.height * 0.8);
+                ctx.fillRect(this.width * 0.7, this.height * 0.1, this.width * 0.2, this.height * 0.8);
+
+                ctx.beginPath();
+                ctx.arc(this.width / 2, this.height / 2, this.width * 0.2, 0, Math.PI * 2);
+                ctx.fillStyle = '#FF00FF';
+                ctx.fill();
+                ctx.strokeStyle = '#00FFFF';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                ctx.shadowBlur = 0;
+                ctx.shadowColor = 'transparent';
+                ctx.restore();
+            }
+        }
+
+        function spawnEnemy() {
+            if (enemies.length >= maxEnemies) return;
+
+            const spawnX = player.x + gameWorld.width * (Math.random() < 0.5 ? -0.8 : 0.8);
+            const clampedX = Math.max(100, Math.min(worldWidth - 100, spawnX));
+            const groundY = getGroundY(clampedX);
+            enemies.push(new Enemy(clampedX, groundY));
+        }
+
+        // --- Projectile Class ---
+        class Projectile {
+            constructor(startX, startY, targetX, targetY) {
+                this.x = startX;
+                this.y = startY;
+                this.radius = 10;
+                this.speed = 8;
+                this.active = true;
+                this.color = '#FF00FF'; // Magenta
+                this.glowColor = '#00FFFF'; // Cyan glow
+
+                const angle = Math.atan2(targetY - startY, targetX - startY);
+                this.dx = Math.cos(angle) * this.speed;
+                this.dy = Math.sin(angle) * this.speed;
+            }
+
+            update() {
+                if (!this.active) return;
+                this.x += this.dx;
+                this.y += this.dy;
+
+                // Deactivate if off-screen
+                if (this.x < camera.x - 50 || this.x > camera.x + gameWorld.width + 50 ||
+                    this.y < camera.y - 50 || this.y > camera.y + gameWorld.height + 50) {
+                    this.active = false;
+                }
+            }
+
+            draw() {
+                if (!this.active) return;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.strokeStyle = this.glowColor;
+                ctx.lineWidth = 2;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = this.glowColor;
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        let projectiles = []; // Global array for projectiles
+
+        // --- Platform Class (No longer used for drawing/updating, but kept for reference) ---
+        class Platform {
+            constructor(x, y, width, height, type = 'static', moveRange = 0, moveSpeed = 0) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.type = type; // 'static', 'moving-h', 'moving-v'
+                this.initialX = x;
+                this.initialY = y;
+                this.moveRange = moveRange;
+                this.moveSpeed = moveSpeed;
+                this.moveDirection = 1; // 1 for forward, -1 for backward
+            }
+
+            update() {
+                // This update logic is no longer called in the main loop
+                if (this.type === 'moving-h') {
+                    this.x += this.moveSpeed * this.moveDirection;
+                    if (this.x > this.initialX + this.moveRange || this.x < this.initialX) {
+                        this.moveDirection *= -1;
+                    }
+                } else if (this.type === 'moving-v') {
+                    this.y += this.moveSpeed * this.moveDirection;
+                    if (this.y > this.initialY + this.moveRange || this.y < this.initialY) {
+                        this.moveDirection *= -1;
+                    }
+                }
+            }
+
+            draw() {
+                // This draw logic is no longer called in the main loop
+                ctx.fillStyle = '#4A4A4A'; // Dark grey for metal
+                ctx.strokeStyle = '#00FFFF'; // Neon blue outline
+                ctx.lineWidth = 2;
+                ctx.shadowBlur = 5;
+                ctx.shadowColor = '#00FFFF';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.strokeRect(this.x, this.y, this.width, this.height);
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function generatePlatforms() {
+            platforms.length = 0; // Ensure platforms array is empty
+            // No platforms are pushed here, effectively removing them from the game.
+        }
+
+
+        // --- Demon YouTube Icon Boss ---
+        class Boss {
+            constructor() {
+                this.width = 200;
+                this.height = 140;
+                this.x = flag.x - this.width - 50; // Appears near the flag
+                this.y = 0; // Will be set to ground level
+                this.speed = 3;
+                this.direction = 1; // 1 for right, -1 for left
+                this.maxHealth = 200; // Easier to kill
+                this.health = this.maxHealth;
+                this.active = false; // Only active when spawned
+                this.isAttacking = false;
+                this.attackCooldown = 90; // Increased cooldown for more distinct attacks
+                this.attackTimer = 0;
+                this.drawGlow = 0;
+
+                // New properties for moves
+                this.attackType = 'idle'; // 'idle', 'charge', 'projectile', 'laugh'
+                this.chargeTargetX = 0;
+                this.chargeSpeed = 10;
+                this.chargeDuration = 60; // Frames for charge
+                this.chargeTimer = 0;
+
+                // Laughing animation properties
+                this.isLaughing = false;
+                this.laughFrame = 0;
+                this.laughDuration = 60; // Frames for laughing animation
+            }
+
+            update() {
+                if (!this.active) return;
+
+                // Handle laughing animation
+                if (this.isLaughing) {
+                    this.laughFrame++;
+                    if (this.laughFrame >= this.laughDuration) {
+                        this.isLaughing = false;
+                        this.laughFrame = 0;
+                    }
+                }
+
+                // Movement
+                if (this.attackType === 'idle') {
+                    this.x += this.speed * this.direction;
+                    if (this.x < flag.x - this.width - 200 || this.x > flag.x + 50) {
+                        this.direction *= -1;
+                    }
+                } else if (this.attackType === 'charge') {
+                    // Move towards chargeTargetX
+                    const dx = this.chargeTargetX - (this.x + this.width / 2);
+                    if (Math.abs(dx) > this.chargeSpeed) {
+                        this.x += Math.sign(dx) * this.chargeSpeed;
+                    } else {
+                        this.x = this.chargeTargetX - this.width / 2; // Arrived at target
+                        this.attackType = 'idle'; // Reset to idle
+                    }
+                }
+
+                this.y = getGroundY(this.x + this.width / 2) - this.height;
+
+                // Attack logic
+                this.attackTimer++;
+                if (this.attackTimer >= this.attackCooldown) {
+                    this.attackTimer = 0;
+                    this.isAttacking = true; // Trigger attack animation/logic
+
+                    const randomAttack = Math.random();
+                    if (randomAttack < 0.4 && !this.isLaughing) { // 40% chance for charge
+                        this.attackType = 'charge';
+                        this.chargeTargetX = player.x + player.width * player.sizeMultiplier / 2;
+                        this.chargeTimer = 0;
+                        // Make player glow if close during charge setup
+                        player.glowIntensity = 1;
+                        player.sizeMultiplier -= 0.02;
+                        if (player.sizeMultiplier < 0.5) player.sizeMultiplier = 0.5;
+                    } else if (randomAttack < 0.8 && !this.isLaughing) { // 40% chance for projectile
+                        this.attackType = 'projectile';
+                        // Spawn projectile
+                        projectiles.push(new Projectile(this.x + this.width / 2, this.y + this.height / 2, player.x + player.width / 2, player.y + player.height / 2));
+                    } else { // 20% chance for laugh or regular attack
+                        if (!this.isLaughing && Math.random() < 0.5) { // 10% chance for laugh
+                            this.isLaughing = true;
+                            this.laughFrame = 0;
+                            playGiggleSound(); // Play laugh sound
+                        }
+                        this.attackType = 'idle'; // Back to idle after attack decision
+                        // Regular attack effect (player glow/size reduction if close)
+                        const playerCenterX = player.x + player.width * player.sizeMultiplier / 2;
+                        const bossCenterX = this.x + this.width / 2;
+                        const distance = Math.abs(playerCenterX - bossCenterX);
+                        if (distance < gameWorld.width / 3) {
+                            player.glowIntensity = 1;
+                            player.sizeMultiplier -= 0.02;
+                            if (player.sizeMultiplier < 0.5) player.sizeMultiplier = 0.5;
+                        }
+                    }
+                } else {
+                    this.isAttacking = false;
+                    // If not attacking, but was charging, continue charge
+                    if (this.attackType === 'charge') {
+                        this.chargeTimer++;
+                        if (this.chargeTimer >= this.chargeDuration) {
+                            this.attackType = 'idle';
+                            this.chargeTimer = 0;
+                        }
+                    }
+                }
+
+                if (this.drawGlow > 0) {
+                    this.drawGlow -= 0.05;
+                    if (this.drawGlow < 0) this.drawGlow = 0;
+                }
+            }
+
+            draw() {
+                if (!this.active) return;
+
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                if (this.drawGlow > 0) {
+                    ctx.shadowBlur = this.drawGlow * 20;
+                    ctx.shadowColor = `rgba(255, 0, 0, ${this.drawGlow})`;
+                }
+
+                const w = this.width;
+                const h = this.height;
+
+                // Demon YouTube Icon Body (Black with sharp angles)
+                ctx.fillStyle = '#000000'; // Black
+                ctx.beginPath();
+                const cornerBevel = w * 0.1;
+                ctx.moveTo(0 + cornerBevel, 0);
+                ctx.lineTo(w - cornerBevel, 0);
+                ctx.lineTo(w, 0 + cornerBevel);
+                ctx.lineTo(w, h - cornerBevel);
+                ctx.lineTo(w - cornerBevel, h);
+                ctx.lineTo(0 + cornerBevel, h);
+                ctx.lineTo(0, h - cornerBevel);
+                ctx.lineTo(0, 0 + cornerBevel);
+                ctx.closePath();
+                ctx.fill();
+
+                // Red glowing accents / lines
+                ctx.strokeStyle = '#FF0000'; // Red
+                ctx.lineWidth = 4;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#FF0000';
+                ctx.beginPath();
+                ctx.moveTo(w * 0.1, h * 0.1);
+                ctx.lineTo(w * 0.9, h * 0.1);
+                ctx.lineTo(w * 0.9, h * 0.9);
+                ctx.lineTo(w * 0.1, h * 0.9);
+                ctx.closePath();
+                ctx.stroke();
+
+                // Demon Eye (glowing red triangle)
+                ctx.fillStyle = '#FF0000';
+                ctx.beginPath();
+                ctx.moveTo(w * 0.4, h * 0.25);
+                ctx.lineTo(w * 0.7, h * 0.5);
+                ctx.lineTo(w * 0.4, h * 0.75);
+                ctx.closePath();
+                ctx.fill();
+
+                // Horns (top of the head)
+                ctx.fillStyle = '#440000'; // Dark red/brown for horns
+                ctx.beginPath();
+                ctx.moveTo(w * 0.2, 0);
+                ctx.lineTo(w * 0.1, -h * 0.2);
+                ctx.lineTo(w * 0.3, -h * 0.1);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.moveTo(w * 0.8, 0);
+                ctx.lineTo(w * 0.9, -h * 0.2);
+                ctx.lineTo(w * 0.7, -h * 0.1);
+                ctx.closePath();
+                ctx.fill();
+
+                // Sharp Teeth/Mouth (below the eye) - Animated for laughing
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                if (this.isLaughing) {
+                    const mouthOpenness = Math.sin(this.laughFrame / this.laughDuration * Math.PI) * 0.1; // Opens and closes
+                    ctx.moveTo(w * 0.3, h * 0.8 + mouthOpenness * h);
+                    ctx.lineTo(w * 0.35, h * 0.7 + mouthOpenness * h);
+                    ctx.lineTo(w * 0.4, h * 0.8 + mouthOpenness * h);
+                    ctx.lineTo(w * 0.45, h * 0.7 + mouthOpenness * h);
+                    ctx.lineTo(w * 0.5, h * 0.8 + mouthOpenness * h);
+                    ctx.lineTo(w * 0.55, h * 0.7 + mouthOpenness * h);
+                    ctx.lineTo(w * 0.6, h * 0.8 + mouthOpenness * h);
+                    ctx.lineTo(w * 0.65, h * 0.7 + mouthOpenness * h);
+                    ctx.lineTo(w * 0.7, h * 0.8 + mouthOpenness * h);
+                } else {
+                    ctx.moveTo(w * 0.3, h * 0.8);
+                    ctx.lineTo(w * 0.35, h * 0.7);
+                    ctx.lineTo(w * 0.4, h * 0.8);
+                    ctx.lineTo(w * 0.45, h * 0.7);
+                    ctx.lineTo(w * 0.5, h * 0.8);
+                    ctx.lineTo(w * 0.55, h * 0.7);
+                    ctx.lineTo(w * 0.6, h * 0.8);
+                    ctx.lineTo(w * 0.65, h * 0.7);
+                    ctx.lineTo(w * 0.7, h * 0.8);
+                }
+                ctx.closePath();
+                ctx.fill();
+
+
+                ctx.shadowBlur = 0;
+                ctx.shadowColor = 'transparent';
+                ctx.restore();
+            }
+        }
+
+        let gameBoss = null; // Declare boss variable globally
+
+        // --- Victory Flag ---
+        const flag = {
+            x: worldWidth - 200,
+            y: 0,
+            width: 20,
+            height: 180,
+            draw() {
+                const groundYAtFlag = getGroundY(this.x);
+                this.y = groundYAtFlag - this.height;
+                ctx.fillStyle = '#654321';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+                ctx.fillStyle = '#FF00FF';
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.width, this.y);
+                ctx.lineTo(this.x + this.width + 100, this.y + 40);
+                ctx.lineTo(this.x + this.width, this.y + 80);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.strokeStyle = '#00FFFF';
+                ctx.lineWidth = 2;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#00FFFF';
+                ctx.beginPath();
+                ctx.moveTo(this.x + this.width / 2, this.y);
+                ctx.lineTo(this.x + this.width / 2, this.y + this.height);
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+            }
+        };
+
+        // --- Camera ---
+        const camera = { x: 0, y: 0 };
+
+        // --- Input Handling ---
+        const keys = { right: false, left: false, up: false, slash: false, limitBreak: false };
+
+        document.addEventListener('keydown', (e) => {
+            if (isGameWon || !gameStarted) return;
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') keys.up = true;
+            if (e.code === 'KeyK') keys.slash = true;
+            if (e.code === 'KeyL') keys.limitBreak = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false; // Added this line explicitly for left keyup
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') keys.up = false;
+            if (e.code === 'KeyK') keys.slash = false;
+            if (e.code === 'KeyL') keys.limitBreak = false;
+        });
+
+        // --- Touch Control Handling ---
+        const leftBtn = document.getElementById('left-btn');
+        const rightBtn = document.getElementById('right-btn');
+        const jumpBtn = document.getElementById('jump-btn');
+        const slashBtn = document.getElementById('slash-btn');
+
+        function handleTouch(e, key, isPressed) {
+            e.preventDefault();
+            if (isGameWon || !gameStarted) return;
+            keys[key] = isPressed;
+        }
+
+        leftBtn.addEventListener('touchstart', (e) => handleTouch(e, 'left', true));
+        leftBtn.addEventListener('touchend', (e) => handleTouch(e, 'left', false));
+        leftBtn.addEventListener('touchcancel', (e) => handleTouch(e, 'left', false));
+
+        rightBtn.addEventListener('touchstart', (e) => handleTouch(e, 'right', true));
+        rightBtn.addEventListener('touchend', (e) => handleTouch(e, 'right', false));
+        rightBtn.addEventListener('touchcancel', (e) => handleTouch(e, 'right', false));
+
+        jumpBtn.addEventListener('touchstart', (e) => handleTouch(e, 'up', true));
+        jumpBtn.addEventListener('touchend', (e) => handleTouch(e, 'up', false));
+        jumpBtn.addEventListener('touchcancel', (e) => handleTouch(e, 'up', false));
+
+        slashBtn.addEventListener('touchstart', (e) => handleTouch(e, 'slash', true));
+        slashBtn.addEventListener('touchend', (e) => handleTouch(e, 'slash', false));
+        slashBtn.addEventListener('touchcancel', (e) => handleTouch(e, 'slash', false));
+
+        limitBreakBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            if (limitBreakCharge >= maxLimitBreakCharge && !limitBreakActive) {
+                activateLimitBreak();
+            }
+        });
+
+        // --- Terrain Generation ---
+        function generateTerrain() {
+            terrain.length = 0;
+            let currentHeight = gameWorld.height - groundBaseHeight;
+            let lastChange = 0;
+
+            for (let x = 0; x <= worldWidth + terrainSegmentLength; x += terrainSegmentLength) {
+                terrain.push(currentHeight);
+
+                let nextChange = (Math.random() * 2 - 1) * maxTerrainHeightVariation * 0.5;
+                currentHeight += (lastChange + nextChange) / 2;
+                lastChange = nextChange;
+
+                const minGroundY = gameWorld.height - (groundBaseHeight + maxTerrainHeightVariation);
+                const maxGroundY = gameWorld.height - (groundBaseHeight - maxTerrainHeightVariation);
+                currentHeight = Math.max(minGroundY, Math.min(maxGroundY, currentHeight));
+            }
+        }
+
+        function getGroundY(xPos) {
+            const index = Math.floor(xPos / terrainSegmentLength);
+            if (index < 0) return terrain[0] || gameWorld.height - groundBaseHeight;
+            if (index >= terrain.length - 1) return terrain[terrain.length - 1] || gameWorld.height - groundBaseHeight;
+
+            const x0 = index * terrainSegmentLength;
+            const x1 = (index + 1) * terrainSegmentLength;
+            const y0 = terrain[index];
+            const y1 = terrain[index + 1];
+
+            return y0 + (y1 - y0) * ((xPos - x0) / (x1 - x0));
+        }
+
+        // --- Rain Initialization ---
+        function initRain() {
+            rainDrops.length = 0;
+            for (let i = 0; i < maxRainDrops; i++) {
+                rainDrops.push({
+                    x: Math.random() * gameWorld.width,
+                    y: Math.random() * gameWorld.height,
+                    length: 10 + Math.random() * 15,
+                    speed: 15 + Math.random() * 10,
+                    opacity: 0.5 + Math.random() * 0.5
+                });
+            }
+        }
+
+        // --- Rain Update ---
+        function updateRain() {
+            if (!isRaining) return;
+            for (let i = 0; i < rainDrops.length; i++) {
+                const drop = rainDrops[i];
+                drop.y += drop.speed;
+                drop.x += drop.speed * 0.1;
+
+                if (drop.y > gameWorld.height || drop.x > gameWorld.width) {
+                    drop.x = Math.random() * gameWorld.width;
+                    drop.y = -drop.length;
+                }
+            }
+        }
+
+        // --- Rain Draw (OPTIMIZED: Batched Drawing) ---
+        function drawRain() {
+            if (!isRaining) return;
+            ctx.strokeStyle = 'rgba(200, 200, 255, 0.7)';
+            ctx.lineWidth = 1.5;
+            ctx.globalAlpha = 1;
+
+            ctx.beginPath();
+            for (let i = 0; i < rainDrops.length; i++) {
+                const drop = rainDrops[i];
+                ctx.moveTo(drop.x, drop.y);
+                ctx.lineTo(drop.x + drop.length * 0.1, drop.y + drop.length);
+            }
+            ctx.stroke();
+        }
+
+        // --- Background Building Generation ---
+        function generateBuildings() {
+            backgroundLayers.forEach(layer => {
+                layer.buildings.length = 0;
+                let currentX = 0;
+                while (currentX < worldWidth + gameWorld.width * 2) {
+                    const height = gameWorld.height * (0.3 + Math.random() * 0.5);
+                    const width = 100 + Math.random() * 200;
+                    const gap = 50 + Math.random() * 100;
+                    layer.buildings.push({
+                        x: currentX,
+                        height: height,
+                        width: width
+                    });
+                    currentX += width + gap;
+                }
+            });
+            calculateBuildingLayerWidths();
+        }
+
+        // --- Draw Background Buildings ---
+        function drawBuildings() {
+            backgroundLayers.forEach(layer => {
+                const parallaxX = -camera.x * layer.speed;
+                ctx.fillStyle = layer.color;
+                layer.buildings.forEach(building => {
+                    let effectiveX = building.x + parallaxX;
+
+                    if (effectiveX + building.width < camera.x - gameWorld.width * 0.5) {
+                        building.x += layer.totalWidth + gameWorld.width * 0.5;
+                        effectiveX = building.x + parallaxX;
+                    } else if (effectiveX > camera.x + gameWorld.width * 1.5) {
+                         building.x -= layer.totalWidth + gameWorld.width * 0.5;
+                         effectiveX = building.x + parallaxX;
+                    }
+
+                    ctx.fillRect(effectiveX, gameWorld.height - building.height, building.width, building.height);
+                });
+            });
+        }
+
+        // Recalculate total width for each building layer after generation
+        function calculateBuildingLayerWidths() {
+            backgroundLayers.forEach((layer, index) => {
+                if (layer.buildings.length > 0) {
+                    layer.totalWidth = layer.buildings[layer.buildings.length - 1].x + layer.buildings[layer.buildings.length - 1].width - layer.buildings[0].x;
+                    layer.index = index;
+                } else {
+                    layer.totalWidth = 0;
+                }
+            });
+        }
+
+        // --- New: Trains ---
+        function generateTrains() {
+            trains.length = 0;
+            const numTrains = 2; // Number of trains
+            for (let i = 0; i < numTrains; i++) {
+                trains.push({
+                    x: Math.random() * worldWidth, // Random starting X
+                    y: trainTrackY,
+                    speed: (Math.random() < 0.5 ? 1 : -1) * (trainMinSpeed + Math.random() * (trainMaxSpeed - trainMinSpeed)),
+                    direction: Math.random() < 0.5 ? 1 : -1,
+                    segmentCount: 5 + Math.floor(Math.random() * 5), // 5-9 segments
+                    parallaxSpeed: 0.2 // Slower than shops, faster than distant buildings
+                });
+            }
+        }
+
+        // --- New: Update Trains ---
+        function updateTrains() {
+            trains.forEach(train => {
+                train.x += train.speed;
+                // Wrap train around the world
+                const totalTrainWidth = train.segmentCount * (trainSegmentWidth + trainGap);
+                if (train.direction > 0 && train.x > worldWidth + gameWorld.width) {
+                    train.x = -totalTrainWidth - Math.random() * worldWidth * 0.5; // Appear from far left
+                } else if (train.direction < 0 && train.x < -totalTrainWidth - gameWorld.width) {
+                    train.x = worldWidth + Math.random() * worldWidth * 0.5; // Appear from far right
+                }
+            });
+        }
+
+        // --- New: Draw Trains ---
+        function drawTrains() {
+            trains.forEach(train => {
+                const parallaxX = -camera.x * train.parallaxSpeed;
+                const baseTrainX = train.x + parallaxX;
+
+                // Draw elevated track
+                ctx.fillStyle = '#333333';
+                ctx.fillRect(baseTrainX, train.y + trainSegmentHeight, train.segmentCount * (trainSegmentWidth + trainGap) + 20, 10);
+                ctx.fillRect(baseTrainX + 10, train.y + trainSegmentHeight + 10, train.segmentCount * (trainSegmentWidth + trainGap), 5);
+
+
+                for (let i = 0; i < train.segmentCount; i++) {
+                    const segmentX = baseTrainX + i * (trainSegmentWidth + trainGap);
+
+                    // Train car body
+                    ctx.fillStyle = '#444444';
+                    ctx.fillRect(segmentX, train.y, trainSegmentWidth, trainSegmentHeight);
+
+                    // Train windows
+                    ctx.fillStyle = '#00FFFF'; // Neon window color
+                    ctx.shadowBlur = 5;
+                    ctx.shadowColor = '#00FFFF';
+                    ctx.fillRect(segmentX + trainSegmentWidth * 0.1, train.y + trainSegmentHeight * 0.2, trainSegmentWidth * 0.3, trainSegmentHeight * 0.6);
+                    ctx.fillRect(segmentX + trainSegmentWidth * 0.5, train.y + trainSegmentHeight * 0.2, trainSegmentWidth * 0.3, trainSegmentHeight * 0.6);
+                    ctx.shadowBlur = 0; // Reset shadow
+
+                    // Train outline/details
+                    ctx.strokeStyle = '#666666';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(segmentX, train.y, trainSegmentWidth, trainSegmentHeight);
+                }
+            });
+        }
+
+
+        // --- Game Logic ---
+        function update() {
+            if (!gameStarted) {
+                requestAnimationFrame(update);
+                return;
+            }
+
+            // --- Day-Night Cycle & Weather Update ---
+            gameTime++;
+            if (gameTime > cycleDuration) gameTime = 0;
+
+            const timeRatio = gameTime / cycleDuration;
+
+            // Sunrise blinding light
+            if (timeRatio >= sunriseStartRatio && timeRatio < sunriseStartRatio + (blindingLightDuration / cycleDuration) && blindingLightTimer < blindingLightDuration) {
+                blindingLightTimer++;
+            } else {
+                blindingLightTimer = 0;
+            }
+
+            // Rain logic based on time of day
+            if (timeRatio >= rainStartCycleRatio || timeRatio < rainEndCycleRatio) {
+                if (!isRaining) {
+                    isRaining = true;
+                    initRain();
+                }
+            } else {
+                isRaining = false;
+            }
+
+            // Lightning logic (more likely when raining)
+            nextLightningStrike--;
+            if (nextLightningStrike <= 0 && isRaining) {
+                if (Math.random() < 0.3) {
+                    // playSound(thunderBuffer); // This will play a log message if thunderBuffer is null
+                    lightningFlashTimer = lightningMaxDuration;
+                }
+                nextLightningStrike = Math.random() * (lightningMaxDelay - lightningMinDelay) + lightningMinDelay;
+            }
+            if (lightningFlashTimer > 0) {
+                lightningFlashTimer--;
+            }
+
+            const playerW = player.width * player.sizeMultiplier;
+            const playerH = player.height * player.sizeMultiplier;
+
+            if (player.glowIntensity > 0) {
+                player.glowIntensity -= 0.02;
+                if (player.glowIntensity < 0) player.glowIntensity = 0;
+            }
+
+            // Sword slash animation update
+            if (player.isSlashing) {
+                player.slashFrame++;
+                if (player.slashFrame >= player.slashDuration) {
+                    player.isSlashing = false;
+                    player.slashFrame = 0;
+                }
+            }
+
+            // Limit Break Multi-slash animation and effects update
+            if (limitBreakActive) {
+                limitBreakSlashTimer++;
+                if (limitBreakSlashTimer % limitBreakSlashInterval === 0) {
+                    player.multiSlash();
+                    if (currentLimitBreakSlash < limitBreakSlashCount) {
+                        currentLimitBreakSlash++;
+                        flashCounter = 3; // Trigger a small flash for each slash
+                        shakeOffset.x = (Math.random() - 0.5) * 10; // Screen shake
+                        shakeOffset.y = (Math.random() - 0.5) * 10;
+                    } else {
+                        limitBreakActive = false;
+                        limitBreakEffects = false; // Turn off visual effects
+                        currentLimitBreakSlash = 0;
+                        player.speed = 6; // Reset player speed after limit break
+                        shakeOffset = { x: 0, y: 0 }; // Reset shake
+                    }
+                }
+            } else {
+                 shakeOffset = { x: 0, y: 0 }; // Ensure no shake if not active
+                 flashCounter = 0; // Ensure no flash if not active
+            }
+
+
+            if (isGameWon) {
+                player.dy += gravity;
+                player.y += player.dy;
+                const groundYAtPlayer = getGroundY(player.x + playerW / 2);
+                if (player.y + playerH > groundYAtPlayer) {
+                    player.y = groundYAtPlayer - playerH;
+                    player.dy = -25;
+                }
+            } else {
+                // Modified player horizontal movement logic for robustness
+                player.dx = 0; // Reset horizontal speed each frame
+                if (keys.right) player.dx = player.speed;
+                else if (keys.left) player.dx = -player.speed;
+                // If neither is true, dx remains 0, ensuring no unwanted movement.
+
+
+                if (keys.up && player.onGround) {
+                    player.dy = -18;
+                    player.onGround = false;
+                    keys.up = false;
+                }
+
+                if (keys.slash && player.hasSword && !player.isSlashing && !limitBreakActive) {
+                    player.slashSword();
+                    keys.slash = false;
+                }
+
+                // Limit Break Activation
+                if (keys.limitBreak && limitBreakCharge >= maxLimitBreakCharge && !limitBreakActive) {
+                    activateLimitBreak();
+                    keys.limitBreak = false;
+                }
+
+                player.x += player.dx;
+                player.y += player.dy;
+                player.dy += gravity;
+
+                player.onGround = false; // Assume not on ground until collision is confirmed
+
+                // Platform collision detection (REMOVED)
+                // The platform collision logic has been removed to disable platforms.
+                // Player will only interact with the ground.
+
+                // Ground collision detection
+                const groundYAtPlayerCenter = getGroundY(player.x + playerW / 2);
+                if (player.y + playerH >= groundYAtPlayerCenter) {
+                    player.y = groundYAtPlayerCenter - playerH;
+                    player.dy = 0;
+                    player.onGround = true;
+                }
+
+
+                if (player.x < 0) player.x = 0;
+                if (player.x + playerW > worldWidth) {
+                    player.x = worldWidth - playerW;
+                }
+
+                // Update wheel rotation
+                if (player.onGround && player.dx !== 0) {
+                    player.wheelRotation += player.dx * player.wheelSpeed * (Math.PI / 180); // Convert speed to rotation
+                }
+
+
+                // Collectible collision
+                collectibles.forEach(item => {
+                    if (item.active &&
+                        player.x < item.x + item.size &&
+                        player.x + playerW > item.x &&
+                        player.y < item.y + item.size &&
+                        player.y + playerH > item.y
+                    ) {
+                        item.active = false;
+                        player.sizeMultiplier += 0.08;
+                        player.glowIntensity = 1;
+                        if (limitBreakCharge < maxLimitBreakCharge) {
+                            limitBreakCharge += 10;
+                            if (limitBreakCharge > maxLimitBreakCharge) limitBreakCharge = maxLimitBreakCharge;
+                        }
+                    }
+                });
+
+                // Enemy update and collision
+                enemySpawnTimer++;
+                if (enemySpawnTimer >= enemySpawnInterval) {
+                    spawnEnemy();
+                    enemySpawnTimer = 0;
+                }
+
+                // Filter out destroyed enemies
+                let activeEnemies = [];
+                enemies.forEach(enemy => {
+                    enemy.update();
+
+                    if (enemy.active) {
+                        // Enemy-player collision (basic) - only if not in limit break
+                        if (!limitBreakActive &&
+                            player.x < enemy.x + enemy.width &&
+                            player.x + playerW > enemy.x &&
+                            player.y < enemy.y + enemy.height &&
+                            player.y + playerH > enemy.y
+                        ) {
+                            player.glowIntensity = 1;
+                            player.sizeMultiplier -= 0.05;
+                            if (player.sizeMultiplier < 0.5) player.sizeMultiplier = 0.5;
+                            enemy.active = false;
+                            enemy.drawGlow = 1;
+                            playDamageSound(); // Play damage sound
+                        }
+
+                        // Sword slash collision with enemy
+                        // During Limit Break, player.isSlashing is rapidly true, so it hits multiple times
+                        if (player.isSlashing &&
+                            player.hitboxOffsetX < enemy.x + enemy.width &&
+                            player.hitboxOffsetX + player.hitboxWidth > enemy.x &&
+                            player.hitboxOffsetY < enemy.y + enemy.height &&
+                            player.hitboxOffsetY + player.hitboxHeight > enemy.y
+                        ) {
+                            if (enemy.active) {
+                                enemy.active = false;
+                                enemy.drawGlow = 1;
+                                if (limitBreakCharge < maxLimitBreakCharge) {
+                                    limitBreakCharge += 20;
+                                    if (limitBreakCharge > maxLimitBreakCharge) limitBreakCharge = maxLimitBreakCharge;
+                                }
+                            }
+                        }
+                    }
+                    if (enemy.active || enemy.drawGlow > 0) {
+                        activeEnemies.push(enemy);
+                    }
+                });
+                enemies.length = 0;
+                enemies.push(...activeEnemies);
+
+                // Projectile update and collision
+                let activeProjectiles = [];
+                projectiles.forEach(p => {
+                    p.update();
+                    if (p.active) {
+                        // Projectile-player collision
+                        const playerW = player.width * player.sizeMultiplier;
+                        const playerH = player.height * player.sizeMultiplier;
+                        if (player.x < p.x + p.radius &&
+                            player.x + playerW > p.x - p.radius &&
+                            player.y < p.y + p.radius &&
+                            player.y + playerH > p.y - p.radius
+                        ) {
+                            player.glowIntensity = 1;
+                            player.sizeMultiplier -= 0.05;
+                            if (player.sizeMultiplier < 0.5) player.sizeMultiplier = 0.5;
+                            p.active = false;
+                            playDamageSound(); // Play damage sound
+                        }
+                        activeProjectiles.push(p);
+                    }
+                });
+                projectiles.length = 0;
+                projectiles.push(...activeProjectiles);
+
+
+                // Boss activation and collision
+                const allCollectiblesCollected = collectibles.every(item => !item.active);
+                if (allCollectiblesCollected && !gameBoss.active) {
+                    gameBoss.active = true;
+                    bossHealthBarContainer.style.display = 'block';
+                    console.log("Boss Activated!"); // Debug log
+                }
+
+                if (gameBoss.active) {
+                    gameBoss.update();
+                     bossHealthBar.style.width = `${(gameBoss.health / gameBoss.maxHealth) * 100}%`;
+
+                    // Player slash hits boss
+                    if (player.isSlashing &&
+                        player.hitboxOffsetX < gameBoss.x + gameBoss.width &&
+                        player.hitboxOffsetX + player.hitboxWidth > gameBoss.x &&
+                        player.hitboxOffsetY < gameBoss.y + gameBoss.height &&
+                        player.hitboxOffsetY + player.hitboxHeight > gameBoss.y
+                    ) {
+                        if (gameBoss.health > 0) {
+                            gameBoss.health -= (limitBreakActive ? 5 : 1); // More damage during limit break
+                            gameBoss.drawGlow = 1; // Visual feedback for hit
+                            if (gameBoss.health <= 0) {
+                                gameBoss.active = false;
+                                bossHealthBarContainer.style.display = 'none';
+                                winGame(); // Call winGame only after boss defeat
+                            }
+                        }
+                    }
+                } else if (player.x + playerW > flag.x && !isGameWon && !allCollectiblesCollected) {
+                    // This is commented out. No direct win from flag if collectibles are not collected.
+                    // It's already handled by the specific win condition that requires boss.health <= 0
+                }
+                // The winning condition is already correct: all collectibles AND boss defeated
+                // No change needed here for the trigger, just verifying.
+            }
+
+            // --- Camera Update (Relative to gameWorld dimensions) ---
+            camera.x = player.x - gameWorld.width / 2 + playerW / 2;
+
+            if (camera.x < 0) camera.x = 0;
+            if (camera.x > worldWidth - gameWorld.width) {
+                camera.x = worldWidth - gameWorld.width;
+            }
+
+            const targetPlayerYOnScreen = gameWorld.height * 0.6;
+            camera.y = player.y - targetPlayerYOnScreen;
+
+            if (camera.y < 0) camera.y = 0;
+
+            const maxWorldGroundY = Math.max(...terrain);
+            const lowestVisibleScreenY = gameWorld.height;
+            const cameraYToShowLowestGround = maxWorldGroundY - lowestVisibleScreenY + groundBaseHeight * 0.5;
+            if (camera.y > cameraYToShowLowestGround) {
+                camera.y = cameraYToShowLowestGround;
+            }
+            if (camera.y + gameWorld.height > maxWorldGroundY + groundBaseHeight * 2) {
+                camera.y = maxWorldGroundY + groundBaseHeight * 2 - gameWorld.height;
+            }
+
+            // Update rain particles
+            updateRain();
+
+            // Update trains
+            updateTrains();
+
+            // Update Limit Break Bar UI
+            limitBreakBar.style.width = `${(limitBreakCharge / maxLimitBreakCharge) * 100}%`;
+            if (limitBreakCharge >= maxLimitBreakCharge) {
+                limitBreakBtn.classList.remove('disabled');
+            } else {
+                limitBreakBtn.classList.add('disabled');
+            }
+
+            // Update Debug Info
+            collectiblesLeftDisplay.textContent = collectibles.filter(item => item.active).length;
+            bossActiveDisplay.textContent = gameBoss.active ? 'YES' : 'NO';
+
+
+            draw();
+            requestAnimationFrame(update);
+        }
+
+        function activateLimitBreak() {
+            if (limitBreakCharge >= maxLimitBreakCharge) {
+                limitBreakActive = true;
+                limitBreakEffects = true;
+                limitBreakCharge = 0;
+                currentLimitBreakSlash = 0;
+                limitBreakSlashTimer = 0;
+                player.speed = 15;
+                flashCounter = 10;
+                playWhooshSound(); // Play limit break sound
+            }
+        }
+
+        function winGame() {
+            if (isGameWon) return;
+            isGameWon = true;
+            messageBox.style.display = 'block';
+            keys.left = false;
+            keys.right = false;
+            keys.slash = false;
+            keys.limitBreak = false;
+        }
+
+        // --- Drawing ---
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+
+            const uniformScale = Math.min(canvas.width / gameWorld.width, canvas.height / gameWorld.height);
+
+            // Apply screen shake offset before general translation
+            ctx.translate(shakeOffset.x, shakeOffset.y);
+
+            ctx.scale(uniformScale, uniformScale);
+            ctx.translate(-camera.x, -camera.y);
+
+            // --- Day-Night Cycle Sky Background ---
+            const timeRatio = gameTime / cycleDuration;
+            let topColor, bottomColor;
+
+            const hue = 220;
+            const saturation = 50;
+
+            // Sunrise specific colors
+            const sunriseHue = 40;
+            const sunriseSaturation = 80;
+            const sunriseTopLightness = 95;
+            const sunriseBottomLightness = 70;
+
+            let currentLightness;
+
+            if (timeRatio >= sunriseStartRatio && timeRatio < sunriseEndRatio) {
+                const sunriseProgress = (timeRatio - sunriseStartRatio) / (sunriseEndRatio - sunriseStartRatio);
+                const nightToSunriseTopL = (Math.sin((timeRatio - 0.75) * Math.PI * 2) * 0.5 + 0.5) * (80 - 10) + 10;
+                const nightToSunriseBottomL = (Math.sin((timeRatio - 0.75) * Math.PI * 2) * 0.5 + 0.5) * (100 - 10) + 10;
+
+                topColor = hslToHex(
+                    hue + (sunriseHue - hue) * sunriseProgress,
+                    saturation + (sunriseSaturation - saturation) * sunriseProgress,
+                    nightToSunriseTopL + (sunriseTopLightness - nightToSunriseTopL) * sunriseProgress
+                );
+                bottomColor = hslToHex(
+                    hue + (sunriseHue - hue) * sunriseProgress,
+                    saturation + (sunriseSaturation - saturation) * sunriseProgress,
+                    nightToSunriseBottomL + (sunriseBottomLightness - nightToSunriseBottomL) * sunriseProgress
+                );
+            } else {
+                currentLightness = (Math.sin(timeRatio * Math.PI * 2) * 0.5 + 0.5) * (80 - 10) + 10;
+                topColor = hslToHex(hue, saturation, currentLightness);
+                bottomColor = hslToHex(hue, saturation + 20, currentLightness - 10);
+            }
+
+            const gradient = ctx.createLinearGradient(0, camera.y, 0, camera.y + gameWorld.height);
+            gradient.addColorStop(0, topColor);
+            gradient.addColorStop(1, bottomColor);
+            ctx.fillStyle = gradient;
+            ctx.fillRect(camera.x, camera.y, gameWorld.width, gameWorld.height);
+
+            // --- Blinding Light Flash ---
+            if (blindingLightTimer > 0) {
+                ctx.fillStyle = `rgba(255, 255, 255, ${blindingLightTimer / blindingLightDuration})`;
+                ctx.fillRect(camera.x, camera.y, gameWorld.width, gameWorld.height);
+            }
+
+            // --- Lightning Flash ---
+            if (lightningFlashTimer > 0) {
+                ctx.fillStyle = `rgba(180, 200, 255, ${lightningFlashTimer / lightningMaxDuration * 0.8})`;
+                ctx.fillRect(camera.x, camera.y, gameWorld.width, gameWorld.height);
+            }
+
+
+            // --- Draw Background Buildings (Parallax) ---
+            drawBuildings();
+            drawTrains(); // Draw trains above distant buildings but behind shops
+
+            // --- Draw Terrain (Ground) ---
+            ctx.fillStyle = '#228B22';
+            ctx.beginPath();
+            ctx.moveTo(0, gameWorld.height);
+            for (let i = 0; i < terrain.length; i++) {
+                ctx.lineTo(i * terrainSegmentLength, terrain[i]);
+            }
+            ctx.lineTo(worldWidth, gameWorld.height);
+            ctx.closePath();
+            ctx.fill();
+
+            // Add some darker ground texture
+            ctx.fillStyle = '#006400';
+            ctx.beginPath();
+            ctx.moveTo(0, gameWorld.height);
+            for (let i = 0; i < terrain.length; i++) {
+                ctx.lineTo(i * terrainSegmentLength, terrain[i] + 10);
+            }
+            ctx.lineTo(worldWidth, gameWorld.height);
+            ctx.closePath();
+            ctx.fill();
+
+            // Draw enemies
+            enemies.forEach(enemy => enemy.draw());
+
+            // Draw platforms (REMOVED)
+            // platforms.forEach(platform => platform.draw()); // This line is no longer needed
+
+            // Draw projectiles
+            projectiles.forEach(p => p.draw());
+
+            collectibles.forEach(item => {
+                if (item.active) {
+                    const currentLightness = (Math.sin(timeRatio * Math.PI * 2) * 0.5 + 0.5) * (80 - 10) + 10;
+                    const nightOverlayAlpha = 0.5 - (currentLightness / 80) * 0.5;
+                    ctx.save();
+                    ctx.globalAlpha = 1 - nightOverlayAlpha;
+                    item.draw(item.x, item.y, item.size);
+                    ctx.restore();
+                }
+            });
+
+            flag.draw();
+            // Draw the boss only if active or if it has remaining glow
+            if (gameBoss.active || gameBoss.drawGlow > 0) {
+                gameBoss.draw();
+            }
+
+            player.draw();
+
+            // Draw Limit Break specific effects AFTER player, but before rain (if rain is over effects)
+            if (limitBreakEffects) {
+                drawLimitBreakEffects();
+            }
+
+            // Draw rain last, so it's on top of everything
+            drawRain();
+
+            ctx.restore();
+        }
+
+        // --- Limit Break Flashy Effects ---
+        function drawLimitBreakEffects() {
+            ctx.save();
+            ctx.globalAlpha = 1;
+
+            // Full screen color overlay / flash
+            if (flashCounter > 0) {
+                const flashAlpha = flashCounter / 10;
+                ctx.fillStyle = `rgba(255, 0, 255, ${flashAlpha})`;
+                ctx.fillRect(camera.x, camera.y, gameWorld.width, gameWorld.height);
+                flashCounter--;
+            }
+
+            // Draw multiple "ghost" slashes around the player
+            const numGhostSlashes = 5;
+            const slashEffectDuration = 8;
+
+            for (let i = 0; i < numGhostSlashes; i++) {
+                const progress = (gameTime % slashEffectDuration) / slashEffectDuration;
+                const alpha = (1 - progress) * 0.8;
+                const scale = 1 + progress * 0.5;
+                const rotation = Math.sin(progress * Math.PI * 2 + i * 0.5) * Math.PI * 0.4;
+                const offsetX = Math.cos(progress * Math.PI * 4 + i * 1) * 50 * (1-progress);
+                const offsetY = Math.sin(progress * Math.PI * 4 + i * 1) * 50 * (1-progress);
+
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.translate(player.x + player.width * player.sizeMultiplier / 2 + offsetX, player.y + player.height * player.sizeMultiplier / 2 + offsetY);
+                ctx.rotate(rotation);
+                ctx.scale(scale, scale);
+
+                ctx.strokeStyle = `rgba(0, 255, 255, 1)`;
+                ctx.lineWidth = 5;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = `rgba(0, 255, 255, 1)`;
+
+                ctx.beginPath();
+                ctx.moveTo(-70, 0);
+                ctx.lineTo(70, 0);
+                ctx.stroke();
+
+                ctx.shadowBlur = 0;
+                ctx.restore();
+            }
+
+            // Overall screen tint/filter for "super mode"
+            ctx.globalAlpha = 0.2;
+            ctx.fillStyle = 'magenta';
+            ctx.globalCompositeOperation = 'overlay';
+            ctx.fillRect(camera.x, camera.y, gameWorld.width, gameWorld.height);
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.globalAlpha = 1;
+
+            ctx.restore();
+        }
+
+
+        // --- Game Initialization ---
+        function initGame() {
+            introScreen.style.display = 'none';
+            gameStarted = true;
+            isGameWon = false;
+
+            player.x = 100;
+            player.sizeMultiplier = 1;
+            player.glowIntensity = 0;
+            player.dy = 0;
+            player.isSlashing = false;
+            player.slashFrame = 0;
+            player.wheelRotation = 0; // Reset wheel rotation on game start
+
+            limitBreakCharge = 0;
+            limitBreakActive = false;
+            currentLimitBreakSlash = 0;
+            limitBreakSlashTimer = 0;
+            player.speed = 6;
+            limitBreakEffects = false;
+            flashCounter = 0;
+            shakeOffset = { x: 0, y: 0 };
+
+
+            enemies.length = 0;
+            projectiles.length = 0; // Clear projectiles on new game
+
+            generateTerrain();
+            player.y = getGroundY(player.x + player.width / 2) - player.height; // Initial player position on ground
+            createCollectibles();
+            initRain();
+            generateBuildings();
+            calculateBuildingLayerWidths();
+            generateTrains(); // Initialize trains
+            generatePlatforms(); // Initialize platforms (will be empty)
+
+            gameBoss = new Boss(); // Initialize the boss when game starts
+            bossHealthBarContainer.style.display = 'none';
+
+
+            initAudio(); // Initialize audio context and sound functions
+            resizeCanvas();
+            requestAnimationFrame(update);
+
+            // Show and then hide the game tip
+            gameTipBox.style.display = 'block';
+            setTimeout(() => {
+                gameTipBox.style.opacity = '1';
+            }, 10); // Small delay to allow display change before transition
+            setTimeout(() => {
+                gameTipBox.style.opacity = '0';
+                setTimeout(() => {
+                    gameTipBox.style.display = 'none';
+                }, 500); // Wait for fade out transition
+            }, 5000); // Display for 5 seconds
+        }
+
+        // --- Start Button Event Listener ---
+        startButton.addEventListener('click', initGame);
+
+        // --- Initial setup on page load ---
+        generateTerrain();
+        createCollectibles();
+        initRain();
+        generateBuildings();
+        calculateBuildingLayerWidths();
+        generateTrains(); // Initialize trains on first load
+        generatePlatforms(); // Initialize platforms on first load (will be empty)
+        gameBoss = new Boss(); // Initialize boss for first draw too
+        initAudio(); // Initialize audio context and sound functions
+        resizeCanvas();
+        draw();
+        requestAnimationFrame(update);
+    </script>
+</body>
+</html>
