@@ -63,14 +63,14 @@
         #intro-screen .intro-title {
             font-size: 3.5em; /* Much larger */
             color: #FF00FF; /* Magenta */
-            text-shadow: 0 0 15px #FF00FF, 0 0 30px #FF00FF; /* Stronger glow */
+            text-shadow: 0 0 20px #FF00FF, 0 0 40px #FF00FF; /* Stronger glow for more noticeable pulse */
             margin-bottom: 20px;
             animation: pulse-glow 2s infinite alternate; /* Add a subtle pulse */
         }
 
         @keyframes pulse-glow {
-            from { text-shadow: 0 0 15px #FF00FF, 0 0 30px #FF00FF; }
-            to { text-shadow: 0 0 25px #FF00FF, 0 0 50px #FF00FF; }
+            from { text-shadow: 0 0 20px #FF00FF, 0 0 40px #FF00FF; } /* Increased glow */
+            to { text-shadow: 0 0 35px #FF00FF, 0 0 70px #FF00FF; } /* Increased glow */
         }
 
         #intro-screen p {
@@ -284,7 +284,7 @@
     <div id="game-container" class="w-full max-w-6xl aspect-video relative">
         <canvas id="gameCanvas"></canvas>
         <!-- Modified message box text -->
-        <div id="message-box">Victory - You have attained entry into the Sphere!</div>
+        <div id="message-box"></div>
 
         <div id="intro-screen">
             <h2 class="intro-title">Cyberpunk Collab Crashers!</h2>
@@ -382,7 +382,8 @@
         ];
 
         // --- New: Trains ---
-        const trains = [];
+        const trains = []; // Global declaration
+
         const trainTrackY = 200; // Y-coordinate for the elevated train track
         const trainMinSpeed = 5;
         const trainMaxSpeed = 15;
@@ -517,6 +518,27 @@
             oscillator.stop(audioContext.currentTime + duration);
         }
 
+        // New: Function to generate a boss death sound
+        function playBossDeathSound(duration = 1.0, startFreq = 80, endFreq = 20, volume = 0.8) {
+            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.type = 'sine'; // A smoother, deeper sound
+            oscillator.frequency.setValueAtTime(startFreq, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(endFreq, audioContext.currentTime + duration);
+
+            gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration); // Fade out
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
 
         async function initAudio() {
             // AudioContext is initialized on first sound playback.
@@ -600,16 +622,6 @@
                 ctx.lineTo(this.x, this.y + cornerBevel);
                 ctx.closePath();
                 ctx.fill();
-
-                // Inner glowing lines (example)
-                ctx.strokeStyle = '#00FFFF'; // Cyan/Neon Blue
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.moveTo(this.x + w * 0.2, this.y + h * 0.2);
-                ctx.lineTo(this.x + w * 0.8, this.y + h * 0.2);
-                ctx.moveTo(this.x + w * 0.2, this.y + h * 0.8);
-                ctx.lineTo(this.x + w * 0.8, this.y + h * 0.8);
-                ctx.stroke();
 
                 // White play triangle (still present)
                 ctx.fillStyle = '#FFFFFF';
@@ -741,7 +753,7 @@
                 ctx.beginPath(); ctx.arc(x + s/2, y + s/2, s * 0.4, 0, Math.PI * 2); ctx.fill(); // Circle for G
                 ctx.strokeStyle = '#34A853'; // Green glow
                 ctx.lineWidth = 3;
-                ctx.shadowBlur = 8;
+                ctx.shadowBlur = 10; // Stronger glow
                 ctx.shadowColor = '#34A853';
                 ctx.beginPath(); ctx.arc(x + s/2, y + s/2, s * 0.4, 0, Math.PI * 2); ctx.stroke();
             }},
@@ -753,7 +765,7 @@
                 ctx.fillText('F', x + s*0.25, y + s*0.75);
                 ctx.strokeStyle = '#00FFFF'; // Neon Cyan glow
                 ctx.lineWidth = 3;
-                ctx.shadowBlur = 8;
+                ctx.shadowBlur = 10; // Stronger glow
                 ctx.shadowColor = '#00FFFF';
                 ctx.strokeRect(x, y, s, s);
             }},
@@ -762,7 +774,7 @@
                 ctx.fillRect(x, y, s, s);
                 ctx.strokeStyle = '#FF9900'; // Orange glow
                 ctx.lineWidth = 4;
-                ctx.shadowBlur = 8;
+                ctx.shadowBlur = 10; // Stronger glow
                 ctx.shadowColor = '#FF9900';
                 ctx.beginPath(); ctx.moveTo(x + s * 0.2, y + s * 0.8);
                 ctx.quadraticCurveTo(x + s * 0.5, y + s * 0.5, x + s * 0.8, y + s * 0.8);
@@ -775,7 +787,7 @@
                 ctx.fillText('N', x + s*0.2, y + s*0.85);
                 ctx.strokeStyle = '#FF00FF'; // Magenta glow
                 ctx.lineWidth = 3;
-                ctx.shadowBlur = 8;
+                ctx.shadowBlur = 10; // Stronger glow
                 ctx.shadowColor = '#FF00FF';
                 ctx.strokeRect(x, y, s, s);
             }},
@@ -784,7 +796,7 @@
                 ctx.beginPath(); ctx.arc(x+s/2, y+s/2, s/2, 0, 2*Math.PI); ctx.fill();
                 ctx.strokeStyle = '#00FF00'; // Green glow
                 ctx.lineWidth = 3;
-                ctx.shadowBlur = 8;
+                ctx.shadowBlur = 10; // Stronger glow
                 ctx.shadowColor = '#00FF00';
                 for(let i=0; i<3; i++) {
                     ctx.beginPath(); ctx.arc(x+s/2, y+s/2, s*(0.15 + i*0.1), 1.2*Math.PI, 1.8*Math.PI); ctx.stroke();
@@ -801,7 +813,7 @@
                 ctx.fill(); // Leaf
                 ctx.strokeStyle = '#FFFFFF'; // White glow
                 ctx.lineWidth = 3;
-                ctx.shadowBlur = 8;
+                ctx.shadowBlur = 10; // Stronger glow
                 ctx.shadowColor = '#FFFFFF';
                 ctx.beginPath();
                 ctx.arc(x + s / 2, y + s / 2, s * 0.45, 0, Math.PI * 2);
@@ -818,7 +830,7 @@
                 ctx.fillRect(x + s * 0.55, y + s * 0.55, s * 0.35, s * 0.35);
                 ctx.strokeStyle = '#000000'; // Black outline
                 ctx.lineWidth = 2;
-                ctx.shadowBlur = 5;
+                ctx.shadowBlur = 10; // Stronger glow
                 ctx.shadowColor = '#00FFFF'; // Cyan glow
                 ctx.strokeRect(x + s * 0.1, y + s * 0.1, s * 0.8, s * 0.8);
             }},
@@ -834,7 +846,7 @@
                 ctx.fill();
                 ctx.strokeStyle = '#00FFFF'; // Neon Cyan glow
                 ctx.lineWidth = 3;
-                ctx.shadowBlur = 8;
+                ctx.shadowBlur = 10; // Stronger glow
                 ctx.shadowColor = '#00FFFF';
                 ctx.stroke();
             }},
@@ -853,7 +865,7 @@
                 ctx.fill();
                 ctx.strokeStyle = '#FFFFFF'; // White glow
                 ctx.lineWidth = 3;
-                ctx.shadowBlur = 8;
+                ctx.shadowBlur = 10; // Stronger glow
                 ctx.shadowColor = '#FFFFFF';
                 ctx.beginPath();
                 ctx.arc(x + s / 2, y + s / 2, s * 0.45, 0, Math.PI * 2);
@@ -865,12 +877,13 @@
                 ctx.moveTo(x + s * 0.1, y + s * 0.5);
                 ctx.quadraticCurveTo(x + s * 0.4, y + s * 0.8, x + s * 0.9, y + s * 0.2);
                 ctx.lineTo(x + s * 0.8, y + s * 0.1);
+                // FIX: Changed quadraticCurveCurveTo to quadraticCurveTo
                 ctx.quadraticCurveTo(x + s * 0.3, y + s * 0.7, x + s * 0.1, y + s * 0.5);
                 ctx.closePath();
                 ctx.fill();
                 ctx.strokeStyle = '#FF0000'; // Red glow
                 ctx.lineWidth = 3;
-                ctx.shadowBlur = 8;
+                ctx.shadowBlur = 10; // Stronger glow
                 ctx.shadowColor = '#FF0000';
                 ctx.stroke();
             }},
@@ -889,15 +902,18 @@
                 const groundYAtCollectible = getGroundY(collectibleX);
                 collectibles.push({
                     x: collectibleX,
-                    y: groundYAtCollectible - 60 - Math.random() * 80,
+                    initialY: groundYAtCollectible - 60 - Math.random() * 80, // Base Y for bobbing
+                    y: 0, // Will be updated in update loop
                     size: 50,
                     active: true,
-                    draw: logoData[i % logoData.length].draw // Cycle through all available logos
+                    draw: logoData[i % logoData.length].draw, // Cycle through all available logos
+                    amplitude: 20 + Math.random() * 20, // Bobbing amplitude
+                    frequency: 0.05 + Math.random() * 0.05 // Bobbing frequency
                 });
             }
         }
 
-        // --- Enemy Drone ---
+        // --- Enemy Goblin ---
         class Enemy {
             constructor(x, y) {
                 this.x = x;
@@ -908,6 +924,8 @@
                 this.direction = Math.random() < 0.5 ? 1 : -1;
                 this.active = true;
                 this.drawGlow = 0;
+                this.legFrame = 0; // For leg animation
+                this.legAnimationSpeed = 0.2; // Adjust for faster/slower leg movement
             }
 
             update() {
@@ -923,6 +941,7 @@
                     this.drawGlow -= 0.05;
                     if (this.drawGlow < 0) this.drawGlow = 0;
                 }
+                this.legFrame += this.legAnimationSpeed; // Increment leg animation frame
             }
 
             draw() {
@@ -933,23 +952,80 @@
 
                 if (this.drawGlow > 0) {
                     ctx.shadowBlur = this.drawGlow * 15;
-                    ctx.shadowColor = `rgba(255, 0, 255, ${this.drawGlow})`;
+                    ctx.shadowColor = `rgba(255, 0, 255, ${this.drawGlow})`; // Existing glow
                 }
 
-                ctx.fillStyle = '#666666';
-                ctx.fillRect(0, 0, this.width, this.height);
+                // Goblin Body (hunch) - LimeGreen
+                ctx.fillStyle = '#32CD32';
+                ctx.beginPath();
+                ctx.moveTo(this.width * 0.2, this.height * 0.2); // Top-left shoulder
+                ctx.lineTo(this.width * 0.8, this.height * 0.2); // Top-right shoulder
+                ctx.lineTo(this.width, this.height); // Bottom-right
+                ctx.lineTo(0, this.height); // Bottom-left
+                ctx.closePath();
+                ctx.fill();
 
-                ctx.fillStyle = '#00FFFF';
-                ctx.fillRect(this.width * 0.1, this.height * 0.1, this.width * 0.2, this.height * 0.8);
-                ctx.fillRect(this.width * 0.7, this.height * 0.1, this.width * 0.2, this.height * 0.8);
+                // Goblin Head - LimeGreen
+                ctx.beginPath();
+                ctx.arc(this.width / 2, this.height * 0.1, this.width * 0.2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Goblin Ears (pointy) - LimeGreen
+                ctx.beginPath();
+                ctx.moveTo(this.width * 0.2, this.height * 0.1);
+                ctx.lineTo(this.width * 0.05, this.height * 0.0);
+                ctx.lineTo(this.width * 0.25, this.height * 0.05);
+                ctx.closePath();
+                ctx.fill();
 
                 ctx.beginPath();
-                ctx.arc(this.width / 2, this.height / 2, this.width * 0.2, 0, Math.PI * 2);
-                ctx.fillStyle = '#FF00FF';
+                ctx.moveTo(this.width * 0.8, this.height * 0.1);
+                ctx.lineTo(this.width * 0.95, this.height * 0.0);
+                ctx.lineTo(this.width * 0.75, this.height * 0.05);
+                ctx.closePath();
                 ctx.fill();
-                ctx.strokeStyle = '#00FFFF';
+
+                // Goblin Eyes - Black
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.arc(this.width * 0.4, this.height * 0.08, this.width * 0.05, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(this.width * 0.6, this.height * 0.08, this.width * 0.05, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Goblin Mouth (simple line) - Black
+                ctx.strokeStyle = '#000000';
                 ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(this.width * 0.4, this.height * 0.15);
+                ctx.lineTo(this.width * 0.6, this.height * 0.15);
                 ctx.stroke();
+
+                // Simple Goblin Arms - Darker green for clothes
+                ctx.fillStyle = '#556B2F';
+                ctx.fillRect(this.width * 0.1, this.height * 0.3, this.width * 0.15, this.height * 0.4);
+                ctx.fillRect(this.width * 0.75, this.height * 0.3, this.width * 0.15, this.height * 0.4);
+
+                // Goblin Legs (animated)
+                const legWidth = this.width * 0.1;
+                const legHeight = this.height * 0.3;
+                const legYOffset = this.height * 0.8; // Position legs below body
+
+                // Front leg
+                ctx.save();
+                ctx.translate(this.width * 0.3, legYOffset);
+                ctx.rotate(Math.sin(this.legFrame) * 0.3); // Swing forward/backward
+                ctx.fillRect(-legWidth / 2, 0, legWidth, legHeight);
+                ctx.restore();
+
+                // Back leg
+                ctx.save();
+                ctx.translate(this.width * 0.7, legYOffset);
+                ctx.rotate(Math.sin(this.legFrame + Math.PI) * 0.3); // Opposite swing
+                ctx.fillRect(-legWidth / 2, 0, legWidth, legHeight);
+                ctx.restore();
+
 
                 ctx.shadowBlur = 0;
                 ctx.shadowColor = 'transparent';
@@ -968,18 +1044,22 @@
 
         // --- Projectile Class ---
         class Projectile {
-            constructor(startX, startY, targetX, targetY) {
+            constructor(startX, startY, targetX, targetY, color = '#FF00FF', glowColor = '#00FFFF', radius = 10, isSuper = false) {
                 this.x = startX;
                 this.y = startY;
-                this.radius = 10;
+                this.radius = radius;
                 this.speed = 8;
                 this.active = true;
-                this.color = '#FF00FF'; // Magenta
-                this.glowColor = '#00FFFF'; // Cyan glow
+                this.color = color;
+                this.glowColor = glowColor;
+                this.isSuper = isSuper; // New property to identify super projectiles
 
+                // Calculate angle to target
                 const angle = Math.atan2(targetY - startY, targetX - startY);
                 this.dx = Math.cos(angle) * this.speed;
                 this.dy = Math.sin(angle) * this.speed;
+
+                console.log(`Projectile fired: Start(${startX}, ${startY}), Target(${targetX}, ${targetY}), Angle: ${angle.toFixed(2)} radians, dx: ${this.dx.toFixed(2)}, dy: ${this.dy.toFixed(2)}`);
             }
 
             update() {
@@ -1001,8 +1081,8 @@
                 ctx.fillStyle = this.color;
                 ctx.fill();
                 ctx.strokeStyle = this.glowColor;
-                ctx.lineWidth = 2;
-                ctx.shadowBlur = 10;
+                ctx.lineWidth = this.isSuper ? 4 : 2; // Thicker border for super projectile
+                ctx.shadowBlur = this.isSuper ? 20 : 10; // Stronger glow for super projectile
                 ctx.shadowColor = this.glowColor;
                 ctx.stroke();
                 ctx.shadowBlur = 0;
@@ -1078,7 +1158,7 @@
                 this.drawGlow = 0;
 
                 // New properties for moves
-                this.attackType = 'idle'; // 'idle', 'charge', 'projectile', 'laugh'
+                this.attackType = 'idle'; // 'idle', 'charge', 'projectile', 'laugh', 'superAttack'
                 this.chargeTargetX = 0;
                 this.chargeSpeed = 10;
                 this.chargeDuration = 60; // Frames for charge
@@ -1088,6 +1168,12 @@
                 this.isLaughing = false;
                 this.laughFrame = 0;
                 this.laughDuration = 60; // Frames for laughing animation
+
+                // Super Attack properties
+                this.superAttackCooldown = 600; // 10 seconds at 60 FPS
+                this.superAttackTimer = 0;
+                this.superAttackWindupDuration = 30; // Frames for wind-up
+                this.superAttackWindupTimer = 0;
             }
 
             update() {
@@ -1100,6 +1186,14 @@
                         this.isLaughing = false;
                         this.laughFrame = 0;
                     }
+                }
+
+                // Super Attack Logic
+                this.superAttackTimer++;
+                if (this.superAttackTimer >= this.superAttackCooldown && this.attackType === 'idle') {
+                    this.attackType = 'superAttack';
+                    this.superAttackWindupTimer = 0;
+                    this.superAttackTimer = 0; // Reset for next cycle
                 }
 
                 // Movement
@@ -1117,59 +1211,72 @@
                         this.x = this.chargeTargetX - this.width / 2; // Arrived at target
                         this.attackType = 'idle'; // Reset to idle
                     }
+                } else if (this.attackType === 'superAttack') {
+                    this.superAttackWindupTimer++;
+                    this.drawGlow = this.superAttackWindupTimer / this.superAttackWindupDuration * 2; // Intense glow during windup
+                    if (this.superAttackWindupTimer >= this.superAttackWindupDuration) {
+                        // Fire super projectile towards player's current position
+                        projectiles.push(new Projectile(this.x + this.width / 2, this.y + this.height / 2, player.x + player.width / 2, player.y + player.height / 2, '#FF0000', '#FF3333', 25, true)); // Red, larger, isSuper
+                        this.attackType = 'idle'; // Back to idle
+                        this.drawGlow = 0; // Reset glow
+                    }
                 }
+
 
                 this.y = getGroundY(this.x + this.width / 2) - this.height;
 
-                // Attack logic
-                this.attackTimer++;
-                if (this.attackTimer >= this.attackCooldown) {
-                    this.attackTimer = 0;
-                    this.isAttacking = true; // Trigger attack animation/logic
+                // Regular Attack logic (only if not doing super attack)
+                if (this.attackType !== 'superAttack') {
+                    this.attackTimer++;
+                    if (this.attackTimer >= this.attackCooldown) {
+                        this.attackTimer = 0;
+                        this.isAttacking = true; // Trigger attack animation/logic
 
-                    const randomAttack = Math.random();
-                    if (randomAttack < 0.4 && !this.isLaughing) { // 40% chance for charge
-                        this.attackType = 'charge';
-                        this.chargeTargetX = player.x + player.width * player.sizeMultiplier / 2;
-                        this.chargeTimer = 0;
-                        // Make player glow if close during charge setup
-                        player.glowIntensity = 1;
-                        player.sizeMultiplier -= 0.02;
-                        if (player.sizeMultiplier < 0.5) player.sizeMultiplier = 0.5;
-                    } else if (randomAttack < 0.8 && !this.isLaughing) { // 40% chance for projectile
-                        this.attackType = 'projectile';
-                        // Spawn projectile
-                        projectiles.push(new Projectile(this.x + this.width / 2, this.y + this.height / 2, player.x + player.width / 2, player.y + player.height / 2));
-                    } else { // 20% chance for laugh or regular attack
-                        if (!this.isLaughing && Math.random() < 0.5) { // 10% chance for laugh
-                            this.isLaughing = true;
-                            this.laughFrame = 0;
-                            playGiggleSound(); // Play laugh sound
-                        }
-                        this.attackType = 'idle'; // Back to idle after attack decision
-                        // Regular attack effect (player glow/size reduction if close)
-                        const playerCenterX = player.x + player.width * player.sizeMultiplier / 2;
-                        const bossCenterX = this.x + this.width / 2;
-                        const distance = Math.abs(playerCenterX - bossCenterX);
-                        if (distance < gameWorld.width / 3) {
+                        const randomAttack = Math.random();
+                        if (randomAttack < 0.4 && !this.isLaughing) { // 40% chance for charge
+                            this.attackType = 'charge';
+                            this.chargeTargetX = player.x + player.width * player.sizeMultiplier / 2;
+                            this.chargeTimer = 0;
+                            // Make player glow if close during charge setup
                             player.glowIntensity = 1;
                             player.sizeMultiplier -= 0.02;
                             if (player.sizeMultiplier < 0.5) player.sizeMultiplier = 0.5;
+                        } else if (randomAttack < 0.8 && !this.isLaughing) { // 40% chance for projectile
+                            this.attackType = 'projectile';
+                            // Spawn projectile
+                            projectiles.push(new Projectile(this.x + this.width / 2, this.y + this.height / 2, player.x + player.width / 2, player.y + player.height / 2));
+                        } else { // 20% chance for laugh or regular attack
+                            if (!this.isLaughing && Math.random() < 0.5) { // 10% chance for laugh
+                                this.isLaughing = true;
+                                this.laughFrame = 0;
+                                playGiggleSound(); // Play laugh sound
+                            }
+                            this.attackType = 'idle'; // Back to idle after attack decision
+                            // Regular attack effect (player glow/size reduction if close)
+                            const playerCenterX = player.x + player.width * player.sizeMultiplier / 2;
+                            const bossCenterX = this.x + this.width / 2;
+                            const distance = Math.abs(playerCenterX - bossCenterX);
+                            if (distance < gameWorld.width / 3) {
+                                player.glowIntensity = 1;
+                                player.sizeMultiplier -= 0.02;
+                                if (player.sizeMultiplier < 0.5) player.sizeMultiplier = 0.5;
+                            }
                         }
-                    }
-                } else {
-                    this.isAttacking = false;
-                    // If not attacking, but was charging, continue charge
-                    if (this.attackType === 'charge') {
-                        this.chargeTimer++;
-                        if (this.chargeTimer >= this.chargeDuration) {
-                            this.attackType = 'idle';
-                            this.chargeTimer = 0;
+                    } else {
+                        this.isAttacking = false;
+                        // If not attacking, but was charging, continue charge
+                        if (this.attackType === 'charge') {
+                            this.chargeTimer++;
+                            if (this.chargeTimer >= this.chargeDuration) {
+                                this.attackType = 'idle';
+                                this.chargeTimer = 0;
+                            }
                         }
                     }
                 }
 
-                if (this.drawGlow > 0) {
+
+                if (this.drawGlow > 0 && this.attackType !== 'superAttack') { // Don't reduce glow if in super attack windup
                     this.drawGlow -= 0.05;
                     if (this.drawGlow < 0) this.drawGlow = 0;
                 }
@@ -1500,6 +1607,7 @@
 
         // --- New: Trains ---
         function generateTrains() {
+            // trains array is already declared globally, so just clear it
             trains.length = 0;
             const numTrains = 2; // Number of trains
             for (let i = 0; i < numTrains; i++) {
@@ -1687,10 +1795,6 @@
 
                 player.onGround = false; // Assume not on ground until collision is confirmed
 
-                // Platform collision detection (REMOVED)
-                // The platform collision logic has been removed to disable platforms.
-                // Player will only interact with the ground.
-
                 // Ground collision detection
                 const groundYAtPlayerCenter = getGroundY(player.x + playerW / 2);
                 if (player.y + playerH >= groundYAtPlayerCenter) {
@@ -1711,20 +1815,24 @@
                 }
 
 
-                // Collectible collision
+                // Collectible collision and bobbing
                 collectibles.forEach(item => {
-                    if (item.active &&
-                        player.x < item.x + item.size &&
-                        player.x + playerW > item.x &&
-                        player.y < item.y + item.size &&
-                        player.y + playerH > item.y
-                    ) {
-                        item.active = false;
-                        player.sizeMultiplier += 0.08;
-                        player.glowIntensity = 1;
-                        if (limitBreakCharge < maxLimitBreakCharge) {
-                            limitBreakCharge += 10;
-                            if (limitBreakCharge > maxLimitBreakCharge) limitBreakCharge = maxLimitBreakCharge;
+                    if (item.active) {
+                        // Update bobbing Y position based on gameTime
+                        item.y = item.initialY + Math.sin(gameTime * item.frequency) * item.amplitude;
+
+                        if (player.x < item.x + item.size &&
+                            player.x + playerW > item.x &&
+                            player.y < item.y + item.size &&
+                            player.y + playerH > item.y
+                        ) {
+                            item.active = false;
+                            player.sizeMultiplier += 0.08;
+                            player.glowIntensity = 1;
+                            if (limitBreakCharge < maxLimitBreakCharge) {
+                                limitBreakCharge += 10;
+                                if (limitBreakCharge > maxLimitBreakCharge) limitBreakCharge = maxLimitBreakCharge;
+                            }
                         }
                     }
                 });
@@ -1796,7 +1904,8 @@
                             player.y + playerH > p.y - p.radius
                         ) {
                             player.glowIntensity = 1;
-                            player.sizeMultiplier -= 0.05;
+                            // More damage for super projectiles
+                            player.sizeMultiplier -= p.isSuper ? 0.1 : 0.05;
                             if (player.sizeMultiplier < 0.5) player.sizeMultiplier = 0.5;
                             p.active = false;
                             playDamageSound(); // Play damage sound
@@ -1833,6 +1942,7 @@
                             if (gameBoss.health <= 0) {
                                 gameBoss.active = false;
                                 bossHealthBarContainer.style.display = 'none';
+                                playBossDeathSound(); // Play boss death sound
                                 winGame(); // Call winGame only after boss defeat
                             }
                         }
@@ -1907,6 +2017,8 @@
         function winGame() {
             if (isGameWon) return;
             isGameWon = true;
+            // Updated victory message with link
+            messageBox.innerHTML = 'Victory for thou! You can now access the Collab Sphere - <a href="https://forms.gle/duGSb7hu3orT1frM6" target="_blank" style="color: #00FFFF; text-decoration: underline;">Click here!</a>';
             messageBox.style.display = 'block';
             keys.left = false;
             keys.right = false;
