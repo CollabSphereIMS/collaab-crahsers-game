@@ -436,7 +436,7 @@
         const lightningMaxDuration = 5; // Frames for lightning flash
         const lightningMinDelay = 300; // Min frames between lightning strikes
         const lightningMaxDelay = 900; // Max frames between lightning strikes
-        let nextLightningStrike = Math.random() * (lightningMaxDelay - lightningMinDelay) + lightningMinDelay;
+        let nextLightningStrike = Math.random() * (lightningMaxDelay - lightningMinDelay) + lightningMaxDelay;
 
         // --- Rain ---
         const maxRainDrops = 300;
@@ -466,7 +466,8 @@
         ];
 
         // --- New: Trains ---
-        const trains = [];
+        // Changed from const to let to prevent "already declared" error on script re-execution in some environments.
+        let trains = []; 
 
         const trainTrackY = 200;
         const trainMinSpeed = 5;
@@ -774,6 +775,7 @@
             generateBuildings();
             calculateBuildingLayerWidths();
             generateTrains();
+            // Removed generateYoutubers();
         }
         window.addEventListener('resize', resizeCanvas);
 
@@ -1314,11 +1316,14 @@
                     this.width = 100; // Beam length
                     this.height = 15; // Beam thickness
                     this.dx = (player.dx > 0 || (player.dx === 0 && !keys.left)) ? this.speed * 2 : -this.speed * 2; // Faster beam
-                    this.dy = 0;
-                    // Start position from player's sword tip (approx)
-                    this.x = player.x + player.width * player.sizeMultiplier * 0.7; // Adjust based on player facing
                     this.y = player.y + player.height * player.sizeMultiplier * 0.5;
-                    if (this.dx < 0) this.x = player.x + player.width * player.sizeMultiplier * 0.3 - this.width; // Adjust for left-facing
+                    // Adjust start X based on player direction
+                    if (player.dx > 0 || (player.dx === 0 && !keys.left)) { // Facing right or idle (default right)
+                        this.x = player.x + player.width * player.sizeMultiplier * 0.7;
+                    } else { // Facing left
+                        this.x = player.x + player.width * player.sizeMultiplier * 0.3 - this.width;
+                    }
+                    this.dy = 0;
                 } else {
                     const angle = Math.atan2(targetY - startY, targetX - startX);
                     this.dx = Math.cos(angle) * this.speed;
@@ -1551,29 +1556,34 @@
                             if (this.attackTimer >= this.attackCooldown) {
                                 this.attackTimer = 0; // Reset for next attack
                                 const randomAttack = Math.random();
-                                if (randomAttack < 0.20) { // 20% chance for charge
+                                if (randomAttack < 0.15) { // 15% chance for charge
                                     this.attackType = 'charge';
                                     this.chargeTargetX = player.x + player.width * player.sizeMultiplier / 2;
                                     player.glowIntensity = 1;
                                     player.sizeMultiplier -= 0.02;
                                     if (player.sizeMultiplier < 0.5) player.sizeMultiplier = 0.5;
-                                } else if (randomAttack < 0.40) { // 20% chance for projectile
+                                } else if (randomAttack < 0.30) { // 15% chance for projectile
                                     this.attackType = 'projectile';
                                     projectiles.push(new Projectile(this.x + this.width / 2, this.y + this.height / 2, player.x + player.width / 2, player.y + player.height / 2));
-                                } else if (randomAttack < 0.55 && this.summonTimer >= this.summonCooldown) { // 15% chance for summon (with cooldown)
+                                } else if (randomAttack < 0.45 && this.summonTimer >= this.summonCooldown) { // 15% chance for summon (with cooldown)
                                     this.attackType = 'summon';
                                     for(let i = 0; i < 2; i++) spawnEnemy();
                                     this.summonTimer = 0;
-                                } else if (randomAttack < 0.70) { // 15% chance for ground slam
+                                } else if (randomAttack < 0.60) { // 15% chance for ground slam
                                     this.attackType = 'groundSlam';
                                     this.isSlamming = false;
-                                } else if (randomAttack < 0.85) { // 15% chance for teleport
+                                } else if (randomAttack < 0.75) { // 15% chance for teleport
                                     this.attackType = 'teleport';
                                     this.teleportTimer = 0;
                                     this.isTeleporting = false;
-                                } else { // 15% chance for omnislash
+                                } else if (randomAttack < 0.90) { // 15% chance for omnislash
                                     this.attackType = 'omnislash';
                                     this.isOmnislashing = false; // Reset for new omnislash
+                                } else { // 10% chance for laugh
+                                    this.attackType = 'laugh';
+                                    this.isLaughing = true;
+                                    this.laughFrame = 0;
+                                    playGiggleSound();
                                 }
                             }
                             break;
@@ -1724,6 +1734,18 @@
                                 this.attackType = 'idle'; // Attack finished, go back to idle
                             }
                             break;
+
+                        case 'laugh':
+                            // Boss laughs and stays in place
+                            this.y = this.groundY - this.height + Math.sin(gameTime * this.hoverFrequency) * this.hoverAmplitude;
+                            this.dy = 0;
+                            this.onGround = true;
+                            if (this.laughFrame >= this.laughDuration) {
+                                this.isLaughing = false;
+                                this.laughFrame = 0;
+                                this.attackType = 'idle'; // Go back to idle after laughing
+                            }
+                            break;
                     }
                 }
 
@@ -1746,9 +1768,10 @@
                 ctx.save();
                 ctx.translate(this.x, this.y);
 
+                // Increased glow intensity for boss
                 if (this.drawGlow > 0) {
-                    ctx.shadowBlur = this.drawGlow * 20;
-                    ctx.shadowColor = `rgba(255, 0, 0, ${this.drawGlow})`;
+                    ctx.shadowBlur = this.drawGlow * 30; // Increased from 20
+                    ctx.shadowColor = `rgba(255, 0, 0, ${this.drawGlow * 1.2})`; // Increased alpha
                 }
                 if (this.isDying) {
                     ctx.globalAlpha = 1 - (this.deathAnimationTimer / this.deathAnimationDuration); // Fade out
@@ -2239,8 +2262,11 @@
         }
 
         // --- New: Trains ---
+        // The global `trains` variable is declared with `let` above.
+        // This function now only clears and populates it.
+
         function generateTrains() {
-            trains.length = 0;
+            trains.length = 0; // Clear the array, do not redeclare
             const numTrains = 2;
             for (let i = 0; i < numTrains; i++) {
                 trains.push({
@@ -2298,10 +2324,14 @@
             });
         }
 
+        // Removed Youtuber Class and related functions (generateYoutubers, updateYoutubers, drawYoutubers)
+
 
         // --- Game Logic ---
         function update() {
+            console.log('update loop entered. gameStarted:', gameStarted); // Added log
             if (!gameStarted) {
+                console.log('Game not started, returning from update.'); // Added log
                 requestAnimationFrame(update);
                 return;
             }
@@ -2325,7 +2355,7 @@
                 if (Math.random() < 0.3) {
                     lightningFlashTimer = lightningMaxDuration;
                 }
-                nextLightningStrike = Math.random() * (lightningMaxDelay - lightningMinDelay) + lightningMinDelay;
+                nextLightningStrike = Math.random() * (lightningMaxDelay - lightningMinDelay) + lightningMaxDelay;
             }
             if (lightningFlashTimer > 0) {
                 lightningFlashTimer -= 1 * gameSpeedMultiplier;
@@ -2418,7 +2448,6 @@
                      if (enemy.isJuggled) { // Stop juggling if limit break ends
                          enemy.isJuggled = false;
                          enemy.juggledDy = 0;
-                         enemy.juggleHits = 0;
                      }
                  });
                  if (gameBoss && gameBoss.isJuggled) {
@@ -2591,7 +2620,6 @@
                                 enemy.drawGlow = 1;
                                 if (enemy.health <= 0) {
                                     enemy.isDying = true;
-                                    enemy.isJuggled = false;
                                 }
                             }
                         }
@@ -2740,6 +2768,7 @@
             updateRainSplashes();
 
             updateTrains();
+            // Removed updateYoutubers();
 
             limitBreakBar.style.width = `${(limitBreakCharge / maxLimitBreakCharge) * 100}%`;
             if (limitBreakCharge >= maxLimitBreakCharge) {
@@ -2873,6 +2902,7 @@
 
             drawBuildings();
             drawTrains();
+            // Removed drawYoutubers();
 
             const terrainColors = ['#006400', '#228B22', '#3CB371', '#6B8E23'];
             const terrainOffsets = [0, 5, 10, 15];
@@ -3005,6 +3035,7 @@
 
         // --- Game Initialization ---
         function initGame() {
+            console.log('initGame called. Setting gameStarted to true.'); // Added log
             introScreen.style.display = 'none';
             gameStarted = true;
             isGameWon = false;
@@ -3053,6 +3084,7 @@
             calculateBuildingLayerWidths();
             generateTrains();
             generatePlatforms();
+            // Removed generateYoutubers(); // Generate YouTubers on game start
 
             gameBoss = new Boss();
             bossHealthBarContainer.style.display = 'none';
@@ -3061,6 +3093,7 @@
             initAudio();
             resizeCanvas();
             requestAnimationFrame(update);
+            console.log('requestAnimationFrame(update) called from initGame.'); // Added log
 
             gameTipBox.style.display = 'block';
             setTimeout(() => {
@@ -3076,6 +3109,7 @@
 
         // --- Start Button Event Listener ---
         startButton.addEventListener('click', initGame);
+        console.log('Start button event listener attached.'); // Added log
 
         // --- Initial setup on page load ---
         generateTerrain();
@@ -3085,11 +3119,13 @@
         calculateBuildingLayerWidths();
         generateTrains();
         generatePlatforms();
+        // Removed generateYoutubers(); // Generate YouTubers on first load too
         gameBoss = new Boss();
         initAudio();
         resizeCanvas();
         draw();
-        requestAnimationFrame(update);
+        // Removed the initial requestAnimationFrame(update); call here.
+        // The game loop will now explicitly start when initGame() is called by the start button.
     </script>
 </body>
 </html>
