@@ -29,7 +29,7 @@
             /* Background will be dynamically set by JS for day/night */
             display: block;
             border-radius: 12px;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2), 0 6px 6px rgba(0,0,0,0.25);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2), 0 6px 6px rgba(0,0,0,0.25);\
             touch-action: none; /* Disable default touch actions like pinch-zoom */
         }
         #message-box {
@@ -181,6 +181,22 @@
             box-shadow: none;
             background-color: rgba(255, 0, 255, 0.2); /* Even more muted */
         }
+        /* Jump button specific styles */
+        #jump-btn {
+            background-color: rgba(0, 100, 255, 0.8); /* Stronger blue */
+            color: white;
+            border: 2px solid #00FFFF; /* Neon blue border */
+            width: 60px; /* Larger width */
+            height: 60px; /* Larger height */
+            font-size: 24px; /* Larger font for icon */
+            border-radius: 10px; /* More rounded */
+            box-shadow: 0 0 15px rgba(0, 200, 255, 0.9); /* Stronger glow */
+        }
+        #jump-btn:active {
+            background-color: rgba(0, 150, 255, 0.5);
+            box-shadow: 0 0 25px rgba(0, 255, 255, 1);
+        }
+
         /* HUD Overlay - SMALLER & MINIMALIST */
         #ui-overlay {
             position: absolute;
@@ -299,6 +315,20 @@
             animation: critical-flash 0.1s ease-out forwards; /* Faster flash, stays at end state */
         }
 
+        #slasha-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 8em; /* Very large */
+            color: #FF00FF; /* Magenta */
+            text-shadow: 0 0 40px #FF00FF, 0 0 80px #FF00FF; /* Strong glow */
+            z-index: 130; /* Above critical text */
+            display: none; /* Initially hidden */
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+
 
         @media (min-width: 768px) {
             .touch-controls {
@@ -349,10 +379,14 @@
                 <button id="left-btn" class="touch-btn">◀</button>
                 <button id="right-btn" class="touch-btn">▶</button>
             </div>
-            <button id="slash-btn" class="touch-btn">⚔️</button> <button id="limit-break-btn">LB</button> <button id="jump-btn">▲</button>
+            <!-- Swapped order of slash-btn and limit-break-btn -->
+            <button id="limit-break-btn">LB</button>
+            <button id="slash-btn" class="touch-btn">⚔️</button>
+            <button id="jump-btn">▲</button>
         </div>
 
         <div id="critical-text">CRITICAL!</div>
+        <div id="slasha-text">SLASHA!</div>
     </div>
 
     <script>
@@ -371,10 +405,14 @@
         const gameTipBox = document.getElementById('game-tip-box'); // New element
         const limitBreakText = document.getElementById('limit-break-text'); // New element for text
         const criticalTextElement = document.getElementById('critical-text'); // New element for CRITICAL! text
+        const slashaTextElement = document.getElementById('slasha-text'); // New element for SLASHA! text
 
         let isGameWon = false;
         let gameStarted = false;
-        let gameSpeedMultiplier = 1; // Global variable for game speed
+        let gameSpeedMultiplier = 0.8; // Global variable for game speed - Adjusted for overall slower pace
+
+        // --- Collectibles (Cyberpunk Brand Logos) ---
+        const collectibles = []; // Moved to top for guaranteed definition
 
         // --- Game World Settings ---
         const worldWidth = 20000; // Increased world length for longer game
@@ -401,7 +439,7 @@
         const lightningMaxDuration = 5; // Frames for lightning flash
         const lightningMinDelay = 300; // Min frames between lightning strikes
         const lightningMaxDelay = 900; // Max frames between lightning strikes
-        let nextLightningStrike = Math.random() * (lightningMaxDelay - lightningMinDelay) + lightningMinDelay;
+        let nextLightningStrike = Math.random() * (lightningMaxDelay - lightningMinDelay) + lightningMaxDelay;
 
         // --- Rain ---
         const maxRainDrops = 300;
@@ -419,7 +457,7 @@
         const meteorites = [];
         const meteoriteMinDelay = 600;
         const meteoriteMaxDelay = 1800;
-        let meteoriteSpawnTimer = Math.random() * (meteoriteMaxDelay - meteoriteMinDelay) + meteoriteMinDelay;
+        let meteoriteSpawnTimer = Math.random() * (meteoriteMaxDelay - meteoriteMinDelay) + meteoriteMaxDelay;
         let redHueTimer = 0;
         const redHueDuration = 60;
 
@@ -431,7 +469,8 @@
         ];
 
         // --- New: Trains ---
-        const trains = [];
+        // Changed from const to let to prevent "already declared" error on script re-execution in some environments.
+        let trains = []; 
 
         const trainTrackY = 200;
         const trainMinSpeed = 5;
@@ -453,7 +492,7 @@
         let limitBreakCharge = 0;
         const maxLimitBreakCharge = 100;
         const limitBreakSlashCount = 10;
-        const limitBreakSlashInterval = 2;
+        const limitBreakSlashInterval = 5; // Increased for more discernible slashes in slow-mo
         let limitBreakActive = false;
         let currentLimitBreakSlash = 0;
         let limitBreakSlashTimer = 0;
@@ -461,6 +500,15 @@
         let flashCounter = 0;
         let shakeOffset = { x: 0, y: 0 };
         let criticalFlashTimer = 0;
+
+        // New Limit Break Sequence Variables
+        let isFinalSlashSequence = false;
+        let finalSlashBlackoutTimer = 0;
+        const finalSlashBlackoutDuration = 30; // frames for blackout
+        let slashaTextTimer = 0;
+        const slashaTextDuration = 60; // frames for SLASHA text display
+        const finalSlashTriggerIndex = limitBreakSlashCount - 1; // Trigger blackout on the second-to-last slash
+
 
         // --- Player Charged Attack ---
         let isChargingAttack = false;
@@ -927,7 +975,6 @@
         };
 
         // --- Collectibles (Cyberpunk Brand Logos) ---
-        const collectibles = [];
         const logoData = [
             { name: 'Google', draw: (x, y, s) => {
                 ctx.fillStyle = '#4285F4';
@@ -1106,16 +1153,79 @@
                 this.drawGlow = 0;
                 this.legFrame = 0;
                 this.legAnimationSpeed = 0.2;
+                this.maxHealth = 30; // Example health for enemies
+                this.health = this.maxHealth;
+                this.isDying = false;
+                this.isJuggled = false;
+                this.juggledDy = 0;
+                this.juggleHits = 0;
+                this.maxJuggleHits = 5; // How many times it can be juggled before falling
+                this.deathAnimationTimer = 0;
+                this.deathAnimationDuration = 60; // Frames for death animation
+                this.fireParticles = []; // For fire death animation
             }
 
             update() {
-                if (!this.active) return;
-                this.x += this.speed * this.direction * gameSpeedMultiplier;
+                if (this.isDying) {
+                    this.deathAnimationTimer += 1; // Death animation speed not affected by gameSpeedMultiplier
 
-                if (this.x < 100 || this.x > worldWidth - 100) {
-                    this.direction *= -1;
+                    // Generate fire particles for a short duration
+                    if (this.deathAnimationTimer < this.deathAnimationDuration * 0.7) {
+                        for (let i = 0; i < 2; i++) {
+                            this.fireParticles.push({
+                                x: this.x + this.width / 2 + (Math.random() - 0.5) * this.width,
+                                y: this.y + this.height / 2 + (Math.random() - 0.5) * this.height,
+                                radius: 5 + Math.random() * 10,
+                                alpha: 1,
+                                dy: -2 - Math.random() * 3, // Move upwards
+                                dx: (Math.random() - 0.5) * 2,
+                                color: Math.random() < 0.5 ? '#FF4500' : '#FFFF00' // Orange-red or yellow
+                            });
+                        }
+                    }
+                    // Update existing fire particles
+                    for (let i = this.fireParticles.length - 1; i >= 0; i--) {
+                        const p = this.fireParticles[i];
+                        p.x += p.dx * gameSpeedMultiplier;
+                        p.y += p.dy * gameSpeedMultiplier;
+                        p.radius *= 0.98; // Shrink
+                        p.alpha -= 0.05; // Fade out
+                        if (p.alpha <= 0.01 || p.radius < 1) {
+                            this.fireParticles.splice(i, 1);
+                        }
+                    }
+
+                    if (this.deathAnimationTimer >= this.deathAnimationDuration && this.fireParticles.length === 0) {
+                        this.active = false; // Finally remove
+                    }
+                    return; // Stop other updates if dying
                 }
-                this.y = getGroundY(this.x + this.width / 2) - this.height;
+
+                if (!this.active) return;
+
+                if (this.isJuggled) {
+                    this.y += this.juggledDy * gameSpeedMultiplier;
+                    this.juggledDy += (gravity * 0.5) * gameSpeedMultiplier; // Reduced gravity for juggling
+                    const groundY = getGroundY(this.x + this.width / 2);
+                    if (this.y + this.height >= groundY) {
+                        this.y = groundY - this.height;
+                        this.juggledDy = -Math.abs(this.juggledDy) * 0.5; // Small bounce effect, losing energy
+                        this.juggleHits++;
+                        if (this.juggleHits >= this.maxJuggleHits || Math.abs(this.juggledDy) < 2) {
+                            this.isJuggled = false;
+                            this.juggleHits = 0;
+                            this.dy = 0; // Ensure it stops moving vertically
+                        }
+                    }
+                    this.x += player.dx * 0.2 * gameSpeedMultiplier; // Follow player slightly
+                } else {
+                    this.x += this.speed * this.direction * gameSpeedMultiplier;
+
+                    if (this.x < 100 || this.x > worldWidth - 100) {
+                        this.direction *= -1;
+                    }
+                    this.y = getGroundY(this.x + this.width / 2) - this.height;
+                }
 
                 if (this.drawGlow > 0) {
                     this.drawGlow -= 0.05 * gameSpeedMultiplier;
@@ -1125,7 +1235,7 @@
             }
 
             draw() {
-                if (!this.active) return;
+                if (!this.active && !this.isDying) return;
 
                 ctx.save();
                 ctx.translate(this.x, this.y);
@@ -1134,6 +1244,14 @@
                     ctx.shadowBlur = this.drawGlow * 15;
                     ctx.shadowColor = `rgba(255, 0, 255, ${this.drawGlow})`;
                 }
+
+                // Calculate overall alpha for fading
+                let overallAlpha = 1;
+                if (this.isDying) {
+                    overallAlpha = 1 - (this.deathAnimationTimer / this.deathAnimationDuration);
+                    if (overallAlpha < 0) overallAlpha = 0; // Ensure it doesn't go negative
+                }
+                ctx.globalAlpha = overallAlpha; // Apply overall fading alpha to the goblin body
 
                 ctx.fillStyle = '#32CD32';
                 ctx.beginPath();
@@ -1183,24 +1301,49 @@
 
                 const legWidth = this.width * 0.1;
                 const legHeight = this.height * 0.3;
-                const legYOffset = this.height * 0.8;
+                const legBaseY = this.height * 0.8; // Base Y for where legs attach
 
+                // Front leg
                 ctx.save();
-                ctx.translate(this.width * 0.3, legYOffset);
-                ctx.rotate(Math.sin(this.legFrame) * 0.3);
-                ctx.fillRect(-legWidth / 2, 0, legWidth, legHeight);
+                ctx.translate(this.width * 0.3, legBaseY);
+                // Adjust Y for bobbing, and X for forward/backward swing
+                const legBobY = Math.sin(this.legFrame) * 5; // Bobbing motion
+                const legSwingAngle = Math.sin(this.legFrame) * 0.5; // Swing angle
+                ctx.rotate(legSwingAngle);
+                ctx.fillRect(-legWidth / 2, legBobY, legWidth, legHeight);
                 ctx.restore();
 
+                // Back leg
                 ctx.save();
-                ctx.translate(this.width * 0.7, legYOffset);
-                ctx.rotate(Math.sin(this.legFrame + Math.PI) * 0.3);
-                ctx.fillRect(-legWidth / 2, 0, legWidth, legHeight);
+                ctx.translate(this.width * 0.7, legBaseY);
+                const backLegBobY = Math.sin(this.legFrame + Math.PI) * 5; // Opposite bobbing motion
+                const backLegSwingAngle = Math.sin(this.legFrame + Math.PI) * 0.5; // Opposite swing angle
+                ctx.rotate(backLegSwingAngle);
+                ctx.fillRect(-legWidth / 2, backLegBobY, legWidth, legHeight);
                 ctx.restore();
 
+
+                // Red overlay for dying goblins - its alpha should be based on overallAlpha
+                if (this.isDying) {
+                    ctx.fillStyle = `rgba(255, 0, 0, ${0.6})`; // Fixed alpha for the red color itself
+                    ctx.globalAlpha = overallAlpha; // Re-apply overallAlpha for this fill, it's already set
+                    ctx.fillRect(0, 0, this.width, this.height);
+                }
 
                 ctx.shadowBlur = 0;
                 ctx.shadowColor = 'transparent';
-                ctx.restore();
+                ctx.restore(); // Restore from initial translate(this.x, this.y)
+
+                // Draw fire particles (these are drawn outside the main goblin save/restore,
+                // so their alpha is independent and managed within their own update/draw)
+                this.fireParticles.forEach(p => {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = p.alpha * overallAlpha; // Particles also fade with the goblin
+                    ctx.fill();
+                });
+                ctx.globalAlpha = 1; // Reset global alpha after drawing particles
             }
         }
 
@@ -1230,11 +1373,14 @@
                     this.width = 100; // Beam length
                     this.height = 15; // Beam thickness
                     this.dx = (player.dx > 0 || (player.dx === 0 && !keys.left)) ? this.speed * 2 : -this.speed * 2; // Faster beam
-                    this.dy = 0;
-                    // Start position from player's sword tip (approx)
-                    this.x = player.x + player.width * player.sizeMultiplier * 0.7; // Adjust based on player facing
                     this.y = player.y + player.height * player.sizeMultiplier * 0.5;
-                    if (this.dx < 0) this.x = player.x + player.width * player.sizeMultiplier * 0.3 - this.width; // Adjust for left-facing
+                    // Adjust start X based on player direction
+                    if (player.dx > 0 || (player.dx === 0 && !keys.left)) { // Facing right or idle (default right)
+                        this.x = player.x + player.width * player.sizeMultiplier * 0.7;
+                    } else { // Facing left
+                        this.x = player.x + player.width * player.sizeMultiplier * 0.3 - this.width;
+                    }
+                    this.dy = 0;
                 } else {
                     const angle = Math.atan2(targetY - startY, targetX - startX);
                     this.dx = Math.cos(angle) * this.speed;
@@ -1329,6 +1475,39 @@
             platforms.length = 0;
         }
 
+        // New: Debris particle class for boss explosion
+        class Debris {
+            constructor(x, y, size, color, dx, dy) {
+                this.x = x;
+                this.y = y;
+                this.size = size;
+                this.color = color;
+                this.dx = dx;
+                this.dy = dy;
+                this.alpha = 1;
+                this.rotation = Math.random() * Math.PI * 2;
+                this.rotationSpeed = (Math.random() - 0.5) * 0.5;
+            }
+
+            update() {
+                this.x += this.dx * gameSpeedMultiplier;
+                this.y += this.dy * gameSpeedMultiplier;
+                this.dy += gravity * 0.5 * gameSpeedMultiplier; // Gravity affects debris
+                this.alpha -= 0.02 * gameSpeedMultiplier; // Fade out
+                this.size *= 0.98; // Shrink
+                this.rotation += this.rotationSpeed * gameSpeedMultiplier;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                ctx.globalAlpha = this.alpha;
+                ctx.fillStyle = this.color;
+                ctx.fillRect(-this.size / 2, -this.size / 2, this.size, this.size);
+                ctx.restore();
+            }
+        }
 
         // --- Demon YouTube Icon Boss ---
         class Boss {
@@ -1396,9 +1575,65 @@
                 this.omnislashTargetX = 0; // The X position where omnislash is performed
 
                 this.groundY = 0; // Store groundY for drawing
+
+                // New juggle properties
+                this.isDying = false;
+                this.isJuggled = false;
+                this.juggledDy = 0;
+                this.juggleHits = 0;
+                this.maxJuggleHits = 7; // Boss can be juggled slightly more
+
+                // Death animation properties
+                this.deathAnimationTimer = 0;
+                this.deathShakeDuration = 90; // Duration of initial shake before explosion
+                this.explosionDuration = 120; // Duration of explosion and debris
+                this.debris = [];
+                this.isExploding = false;
             }
 
             update() {
+                if (this.isDying) {
+                    this.deathAnimationTimer += 1;
+                    this.y += 1; // Slight fall during death animation
+
+                    if (this.deathAnimationTimer < this.deathShakeDuration) {
+                        // Apply shake effect to the boss itself during initial death phase
+                        this.x += (Math.random() - 0.5) * 10 * (1 - this.deathAnimationTimer / this.deathShakeDuration);
+                        this.y += (Math.random() - 0.5) * 10 * (1 - this.deathAnimationTimer / this.deathShakeDuration);
+                    } else if (this.deathAnimationTimer === this.deathShakeDuration && !this.isExploding) {
+                        this.isExploding = true;
+                        playBossDeathSound(); // Play explosion sound
+                        // Generate initial debris
+                        for (let i = 0; i < 50; i++) {
+                            const angle = Math.random() * Math.PI * 2;
+                            const speed = 5 + Math.random() * 10;
+                            this.debris.push(new Debris(
+                                this.x + this.width / 2,
+                                this.y + this.height / 2,
+                                10 + Math.random() * 20,
+                                Math.random() < 0.5 ? '#FF0000' : '#440000', // Red and dark red pieces
+                                Math.cos(angle) * speed,
+                                Math.sin(angle) * speed
+                            ));
+                        }
+                    }
+
+                    // Update debris particles
+                    for (let i = this.debris.length - 1; i >= 0; i--) {
+                        const p = this.debris[i];
+                        p.update();
+                        if (p.alpha <= 0.01 || p.size < 1) {
+                            this.debris.splice(i, 1);
+                        }
+                    }
+
+                    if (this.deathAnimationTimer >= this.deathShakeDuration + this.explosionDuration && this.debris.length === 0) {
+                        this.active = false; // Fully dead, remove from game
+                        this.isDying = false; // Reset dying state
+                    }
+                    return; // Stop other updates if dying
+                }
+
                 if (!this.active) return;
 
                 // Update timers, applying gameSpeedMultiplier
@@ -1419,199 +1654,233 @@
 
                 this.groundY = getGroundY(this.x + this.width / 2);
 
-                // Main attack type state machine
-                switch (this.attackType) {
-                    case 'idle':
-                        this.x += this.speed * this.direction * gameSpeedMultiplier;
-                        // Ensure boss stays within world bounds, reverse direction if hit
-                        if (this.x < 0) {
-                            this.x = 0;
-                            this.direction = 1;
-                        } else if (this.x + this.width > worldWidth) {
-                            this.x = worldWidth - this.width;
-                            this.direction = -1;
+                if (this.isJuggled) {
+                    this.y += this.juggledDy * gameSpeedMultiplier;
+                    this.juggledDy += (gravity * 0.2) * gameSpeedMultiplier; // Reduced gravity for longer juggling
+                    const groundY = getGroundY(this.x + this.width / 2);
+                    if (this.y + this.height >= groundY) {
+                        this.y = groundY - this.height;
+                        this.juggledDy = -Math.abs(this.juggledDy) * 0.5; // Slightly stronger bounce for boss
+                        this.juggleHits++;
+                        if (this.juggleHits >= this.maxJuggleHits || Math.abs(this.juggledDy) < 2) {
+                            this.isJuggled = false;
+                            this.juggleHits = 0;
+                            this.dy = 0; // Ensure it stops moving vertically
                         }
-                        this.y = this.groundY - this.height + Math.sin(gameTime * this.hoverFrequency) * this.hoverAmplitude;
-                        this.dy = 0;
-                        this.onGround = true;
-
-                        // Transition to a new attack if cooldown is ready
-                        if (this.attackTimer >= this.attackCooldown) {
-                            this.attackTimer = 0; // Reset for next attack
-                            const randomAttack = Math.random();
-                            if (randomAttack < 0.20) { // 20% chance for charge
-                                this.attackType = 'charge';
-                                this.chargeTargetX = player.x + player.width * player.sizeMultiplier / 2;
-                                player.glowIntensity = 1;
-                                player.sizeMultiplier -= 0.02;
-                                if (player.sizeMultiplier < 0.5) player.sizeMultiplier = 0.5;
-                            } else if (randomAttack < 0.40) { // 20% chance for projectile
-                                this.attackType = 'projectile';
-                                projectiles.push(new Projectile(this.x + this.width / 2, this.y + this.height / 2, player.x + player.width / 2, player.y + player.height / 2));
-                            } else if (randomAttack < 0.55 && this.summonTimer >= this.summonCooldown) { // 15% chance for summon (with cooldown)
-                                this.attackType = 'summon';
-                                for(let i = 0; i < 2; i++) spawnEnemy();
-                                this.summonTimer = 0;
-                            } else if (randomAttack < 0.70) { // 15% chance for ground slam
-                                this.attackType = 'groundSlam';
-                                this.isSlamming = false;
-                            } else if (randomAttack < 0.85) { // 15% chance for teleport
-                                this.attackType = 'teleport';
-                                this.teleportTimer = 0;
-                                this.isTeleporting = false;
-                            } else { // 15% chance for omnislash
-                                this.attackType = 'omnislash';
-                                this.isOmnislashing = false; // Reset for new omnislash
+                    }
+                    this.x += player.dx * 0.1 * gameSpeedMultiplier; // Boss follows less aggressively
+                } else {
+                    // Main attack type state machine
+                    switch (this.attackType) {
+                        case 'idle':
+                            this.x += this.speed * this.direction * gameSpeedMultiplier;
+                            // Ensure boss stays within world bounds, reverse direction if hit
+                            if (this.x < 0) {
+                                this.x = 0;
+                                this.direction = 1;
+                            } else if (this.x + this.width > worldWidth) {
+                                this.x = worldWidth - this.width;
+                                this.direction = -1;
                             }
-                        }
-                        break;
-
-                    case 'charge':
-                        const dx = this.chargeTargetX - (this.x + this.width / 2);
-                        if (Math.abs(dx) > this.chargeSpeed * gameSpeedMultiplier) {
-                            this.x += Math.sign(dx) * this.chargeSpeed * gameSpeedMultiplier;
-                        } else {
-                            this.x = this.chargeTargetX - this.width / 2;
-                            this.attackType = 'idle'; // Attack finished, go back to idle
-                        }
-                        this.y = this.groundY - this.height + Math.sin(gameTime * this.hoverFrequency) * this.hoverAmplitude;
-                        this.dy = 0;
-                        this.onGround = true;
-                        break;
-
-                    case 'projectile':
-                        // Projectile logic is handled in the main update loop after firing
-                        this.y = this.groundY - this.height + Math.sin(gameTime * this.hoverFrequency) * this.hoverAmplitude;
-                        this.dy = 0;
-                        this.onGround = true;
-                        // Assuming projectile is fired instantly, transition back to idle
-                        this.attackType = 'idle';
-                        break;
-
-                    case 'superAttack':
-                        this.drawGlow = this.superAttackWindupTimer / this.superAttackWindupDuration * 2;
-                        if (this.superAttackWindupTimer >= this.superAttackWindupDuration) {
-                            projectiles.push(new Projectile(this.x + this.width / 2, this.y + this.height / 2, player.x + player.width / 2, player.y + player.height / 2, '#FF0000', '#FF3333', 25, true));
-                            this.attackType = 'idle'; // Attack finished, go back to idle
-                            this.drawGlow = 0;
-                        }
-                        this.y = this.groundY - this.height + Math.sin(gameTime * this.hoverFrequency) * this.hoverAmplitude;
-                        this.dy = 0;
-                        this.onGround = true;
-                        break;
-
-                    case 'groundSlam':
-                        if (!this.isSlamming) {
-                            this.dy = -this.slamJumpHeight / 10;
-                            this.isSlamming = true;
-                            this.onGround = false;
-                        }
-
-                        this.y += this.dy * gameSpeedMultiplier;
-                        this.dy += gravity * gameSpeedMultiplier;
-
-                        if (this.y + this.height >= this.groundY) {
-                            this.y = this.groundY - this.height;
+                            this.y = this.groundY - this.height + Math.sin(gameTime * this.hoverFrequency) * this.hoverAmplitude;
                             this.dy = 0;
                             this.onGround = true;
-                            this.isSlamming = false;
-                            this.slamShockwaveRadius = 1;
-                            playGroundSlamSound();
 
-                            const playerCenterX = player.x + player.width * player.sizeMultiplier / 2;
-                            const bossCenterX = this.x + this.width / 2;
-                            const distance = Math.abs(playerCenterX - bossCenterX);
-                            if (distance < this.slamShockwaveMaxRadius * 0.8) {
-                                player.speedMultiplier = 0.3;
-                                setTimeout(() => { player.speedMultiplier = 1; }, 1000 / gameSpeedMultiplier);
-                                player.glowIntensity = 1;
-                            }
-                            this.attackType = 'idle'; // Attack finished, go back to idle
-                        }
-                        break;
-
-                    case 'teleport':
-                        const fadeProgress = Math.abs(this.teleportTimer - this.teleportDuration / 2) / (this.teleportDuration / 2);
-                        ctx.globalAlpha = 1 - fadeProgress;
-
-                        if (this.teleportTimer >= Math.floor(this.teleportDuration / 2) && !this.isTeleporting) {
-                            this.isTeleporting = true;
-                            let newX;
-                            do {
-                                newX = player.x + (Math.random() - 0.5) * gameWorld.width * 0.8;
-                                newX = Math.max(100, Math.min(worldWidth - 100 - this.width, newX));
-                            } while (Math.abs(newX - this.x) < 300);
-                            this.x = newX;
-                            this.y = getGroundY(this.x + this.width / 2) - this.height;
-                            playTeleportSound();
-                        }
-                        if (this.teleportTimer >= this.teleportDuration) {
-                            this.isTeleporting = false;
-                            this.teleportTimer = 0;
-                            this.attackType = 'idle'; // Attack finished, go back to idle
-                            ctx.globalAlpha = 1;
-                        }
-                        this.y = this.groundY - this.height + Math.sin(gameTime * this.hoverFrequency) * this.hoverAmplitude;
-                        this.dy = 0;
-                        this.onGround = true;
-                        break;
-
-                    case 'summon':
-                        this.y = this.groundY - this.height + Math.sin(gameTime * this.hoverFrequency) * this.hoverAmplitude;
-                        this.dy = 0;
-                        this.onGround = true;
-                        // Assuming summon is an instant action after triggering
-                        this.attackType = 'idle'; // Attack finished, go back to idle
-                        break;
-
-                    case 'omnislash':
-                        if (!this.isOmnislashing) {
-                            this.dy = -this.omnislashJumpHeight / 10;
-                            this.isOmnislashing = true;
-                            this.onGround = false;
-                            this.omnislashTargetX = player.x + player.width / 2;
-                            this.currentOmnislashSlash = 0;
-                            this.omnislashSlashTimer = 0;
-                        }
-
-                        this.y += this.dy * gameSpeedMultiplier;
-                        this.dy += gravity * gameSpeedMultiplier;
-
-                        const targetDx = this.omnislashTargetX - (this.x + this.width / 2);
-                        if (Math.abs(targetDx) > this.speed * gameSpeedMultiplier) {
-                            this.x += Math.sign(targetDx) * this.speed * gameSpeedMultiplier;
-                        }
-
-                        if (this.dy < 0 || (this.dy >= 0 && this.y + this.height < this.groundY)) {
-                            if (this.omnislashSlashTimer >= this.omnislashSlashInterval) {
-                                if (this.currentOmnislashSlash < this.omnislashSlashes) {
-                                    playSlashSound(0.1, 2000, 0.8);
-                                    const slashHitboxX = this.x + this.width / 2 - this.omnislashHitboxWidth / 2;
-                                    const slashHitboxY = this.y + this.height / 2 - this.omnislashHitboxHeight / 2;
-
-                                    if (player.x < slashHitboxX + this.omnislashHitboxWidth &&
-                                        player.x + player.width * player.sizeMultiplier > slashHitboxX &&
-                                        player.y < slashHitboxY + this.omnislashHitboxHeight &&
-                                        player.y + player.height * player.sizeMultiplier > slashHitboxY) {
-                                        player.sizeMultiplier -= this.omnislashDamage;
-                                        if (player.sizeMultiplier < 0.5) player.sizeMultiplier = 0.5;
-                                        player.glowIntensity = 1;
-                                        playDamageSound();
-                                    }
-                                    this.currentOmnislashSlash++;
-                                    this.omnislashSlashTimer = 0;
+                            // Transition to a new attack if cooldown is ready
+                            if (this.attackTimer >= this.attackCooldown) {
+                                this.attackTimer = 0; // Reset for next attack
+                                const randomAttack = Math.random();
+                                if (randomAttack < 0.15) { // 15% chance for charge
+                                    this.attackType = 'charge';
+                                    this.chargeTargetX = player.x + player.width * player.sizeMultiplier / 2;
+                                    player.glowIntensity = 1;
+                                    player.sizeMultiplier -= 0.02;
+                                    if (player.sizeMultiplier < 0.5) player.sizeMultiplier = 0.5;
+                                } else if (randomAttack < 0.30) { // 15% chance for projectile
+                                    this.attackType = 'projectile';
+                                    projectiles.push(new Projectile(this.x + this.width / 2, this.y + this.height / 2, player.x + player.width / 2, player.y + player.height / 2));
+                                } else if (randomAttack < 0.45 && this.summonTimer >= this.summonCooldown) { // 15% chance for summon (with cooldown)
+                                    this.attackType = 'summon';
+                                    for(let i = 0; i < 2; i++) spawnEnemy();
+                                    this.summonTimer = 0;
+                                } else if (randomAttack < 0.60) { // 15% chance for ground slam
+                                    this.attackType = 'groundSlam';
+                                    this.isSlamming = false;
+                                } else if (randomAttack < 0.75) { // 15% chance for teleport
+                                    this.attackType = 'teleport';
+                                    this.teleportTimer = 0;
+                                    this.isTeleporting = false;
+                                } else if (randomAttack < 0.90) { // 15% chance for omnislash
+                                    this.attackType = 'omnislash';
+                                    this.isOmnislashing = false; // Reset for new omnislash
+                                } else { // 10% chance for laugh
+                                    this.attackType = 'laugh';
+                                    this.isLaughing = true;
+                                    this.laughFrame = 0;
+                                    playGiggleSound();
                                 }
                             }
-                        }
+                            break;
 
-                        if (this.y + this.height >= this.groundY) {
-                            this.y = this.groundY - this.height;
+                        case 'charge':
+                            const dx = this.chargeTargetX - (this.x + this.width / 2);
+                            if (Math.abs(dx) > this.chargeSpeed * gameSpeedMultiplier) {
+                                this.x += Math.sign(dx) * this.chargeSpeed * gameSpeedMultiplier;
+                            } else {
+                                this.x = this.chargeTargetX - this.width / 2;
+                                this.attackType = 'idle'; // Attack finished, go back to idle
+                            }
+                            this.y = this.groundY - this.height + Math.sin(gameTime * this.hoverFrequency) * this.hoverAmplitude;
                             this.dy = 0;
                             this.onGround = true;
-                            this.isOmnislashing = false;
+                            break;
+
+                        case 'projectile':
+                            // Projectile logic is handled in the main update loop after firing
+                            this.y = this.groundY - this.height + Math.sin(gameTime * this.hoverFrequency) * this.hoverAmplitude;
+                            this.dy = 0;
+                            this.onGround = true;
+                            // Assuming projectile is fired instantly, transition back to idle
+                            this.attackType = 'idle';
+                            break;
+
+                        case 'superAttack':
+                            this.drawGlow = this.superAttackWindupTimer / this.superAttackWindupDuration * 2;
+                            if (this.superAttackWindupTimer >= this.superAttackWindupDuration) {
+                                projectiles.push(new Projectile(this.x + this.width / 2, this.y + this.height / 2, player.x + player.width / 2, player.y + player.height / 2, '#FF0000', '#FF3333', 25, true));
+                                this.attackType = 'idle'; // Attack finished, go back to idle
+                                this.drawGlow = 0;
+                            }
+                            this.y = this.groundY - this.height + Math.sin(gameTime * this.hoverFrequency) * this.hoverAmplitude;
+                            this.dy = 0;
+                            this.onGround = true;
+                            break;
+
+                        case 'groundSlam':
+                            if (!this.isSlamming) {
+                                this.dy = -this.slamJumpHeight / 10;
+                                this.isSlamming = true;
+                                this.onGround = false;
+                            }
+
+                            this.y += this.dy * gameSpeedMultiplier;
+                            this.dy += gravity * gameSpeedMultiplier;
+
+                            if (this.y + this.height >= this.groundY) {
+                                this.y = this.groundY - this.height;
+                                this.dy = 0;
+                                this.onGround = true;
+                                this.isSlamming = false;
+                                this.slamShockwaveRadius = 1;
+                                playGroundSlamSound();
+
+                                const playerCenterX = player.x + player.width * player.sizeMultiplier / 2;
+                                const bossCenterX = this.x + this.width / 2;
+                                const distance = Math.abs(playerCenterX - bossCenterX);
+                                if (distance < this.slamShockwaveMaxRadius * 0.8) {
+                                    player.speedMultiplier = 0.3;
+                                    setTimeout(() => { player.speedMultiplier = 1; }, 1000 / gameSpeedMultiplier);
+                                    player.glowIntensity = 1;
+                                }
+                                this.attackType = 'idle'; // Attack finished, go back to idle
+                            }
+                            break;
+
+                        case 'teleport':
+                            const fadeProgress = Math.abs(this.teleportTimer - this.teleportDuration / 2) / (this.teleportDuration / 2);
+                            ctx.globalAlpha = 1 - fadeProgress;
+
+                            if (this.teleportTimer >= Math.floor(this.teleportDuration / 2) && !this.isTeleporting) {
+                                this.isTeleporting = true;
+                                let newX;
+                                do {
+                                    newX = player.x + (Math.random() - 0.5) * gameWorld.width * 0.8;
+                                    newX = Math.max(100, Math.min(worldWidth - 100 - this.width, newX));
+                                } while (Math.abs(newX - this.x) < 300);
+                                this.x = newX;
+                                this.y = getGroundY(this.x + this.width / 2) - this.height;
+                                playTeleportSound();
+                            }
+                            if (this.teleportTimer >= this.teleportDuration) {
+                                this.isTeleporting = false;
+                                this.teleportTimer = 0;
+                                this.attackType = 'idle'; // Attack finished, go back to idle
+                                ctx.globalAlpha = 1;
+                            }
+                            this.y = this.groundY - this.height + Math.sin(gameTime * this.hoverFrequency) * this.hoverAmplitude;
+                            this.dy = 0;
+                            this.onGround = true;
+                            break;
+
+                        case 'summon':
+                            this.y = this.groundY - this.height + Math.sin(gameTime * this.hoverFrequency) * this.hoverAmplitude;
+                            this.dy = 0;
+                            this.onGround = true;
+                            // Assuming summon is an instant action after triggering
                             this.attackType = 'idle'; // Attack finished, go back to idle
-                        }
-                        break;
+                            break;
+
+                        case 'omnislash':
+                            if (!this.isOmnislashing) {
+                                this.dy = -this.omnislashJumpHeight / 10;
+                                this.isOmnislashing = true;
+                                this.onGround = false;
+                                this.omnislashTargetX = player.x + player.width / 2;
+                                this.currentOmnislashSlash = 0;
+                                this.omnislashSlashTimer = 0;
+                            }
+
+                            this.y += this.dy * gameSpeedMultiplier;
+                            this.dy += gravity * gameSpeedMultiplier;
+
+                            const targetDx = this.omnislashTargetX - (this.x + this.width / 2);
+                            if (Math.abs(targetDx) > this.speed * gameSpeedMultiplier) {
+                                this.x += Math.sign(targetDx) * this.speed * gameSpeedMultiplier;
+                            }
+
+                            if (this.dy < 0 || (this.dy >= 0 && this.y + this.height < this.groundY)) {
+                                if (this.omnislashSlashTimer >= this.omnislashSlashInterval) {
+                                    if (this.currentOmnislashSlash < this.omnislashSlashes) {
+                                        playSlashSound(0.1, 2000, 0.8);
+                                        const slashHitboxX = this.x + this.width / 2 - this.omnislashHitboxWidth / 2;
+                                        const slashHitboxY = this.y + this.height / 2 - this.omnislashHitboxHeight / 2;
+
+                                        if (player.x < slashHitboxX + this.omnislashHitboxWidth &&
+                                            player.x + player.width * player.sizeMultiplier > slashHitboxX &&
+                                            player.y < slashHitboxY + this.omnislashHitboxHeight &&
+                                            player.y + player.height * player.sizeMultiplier > slashHitboxY) {
+                                            player.sizeMultiplier -= this.omnislashDamage;
+                                            if (player.sizeMultiplier < 0.5) player.sizeMultiplier = 0.5;
+                                            player.glowIntensity = 1;
+                                            playDamageSound();
+                                        }
+                                        this.currentOmnislashSlash++;
+                                        this.omnislashSlashTimer = 0;
+                                    }
+                                }
+                            }
+
+                            if (this.y + this.height >= this.groundY) {
+                                this.y = this.groundY - this.height;
+                                this.dy = 0;
+                                this.onGround = true;
+                                this.isOmnislashing = false;
+                                this.attackType = 'idle'; // Attack finished, go back to idle
+                            }
+                            break;
+
+                        case 'laugh':
+                            // Boss laughs and stays in place
+                            this.y = this.groundY - this.height + Math.sin(gameTime * this.hoverFrequency) * this.hoverAmplitude;
+                            this.dy = 0;
+                            this.onGround = true;
+                            if (this.laughFrame >= this.laughDuration) {
+                                this.isLaughing = false;
+                                this.laughFrame = 0;
+                                this.attackType = 'idle'; // Go back to idle after laughing
+                            }
+                            break;
+                    }
                 }
 
                 if (this.slamShockwaveRadius > 0) {
@@ -1628,15 +1897,29 @@
             }
 
             draw() {
-                if (!this.active) return;
+                if (!this.active && !this.isDying) return;
 
                 ctx.save();
-                ctx.translate(this.x, this.y);
-
-                if (this.drawGlow > 0) {
-                    ctx.shadowBlur = this.drawGlow * 20;
-                    ctx.shadowColor = `rgba(255, 0, 0, ${this.drawGlow})`;
+                // Apply death shake to boss drawing
+                if (this.isDying && this.deathAnimationTimer < this.deathShakeDuration) {
+                    const shakeIntensity = 1 - (this.deathAnimationTimer / this.deathShakeDuration);
+                    ctx.translate(this.x + (Math.random() - 0.5) * 20 * shakeIntensity, this.y + (Math.random() - 0.5) * 20 * shakeIntensity);
+                } else {
+                    ctx.translate(this.x, this.y);
                 }
+
+
+                // Increased glow intensity for boss
+                if (this.drawGlow > 0) {
+                    ctx.shadowBlur = this.drawGlow * 30; // Increased from 20
+                    ctx.shadowColor = `rgba(255, 0, 0, ${this.drawGlow * 1.2})`; // Increased alpha
+                }
+                if (this.isDying && this.deathAnimationTimer >= this.deathShakeDuration) {
+                    ctx.globalAlpha = 0; // Boss body disappears after initial shake
+                } else if (this.isDying) {
+                    ctx.globalAlpha = 1 - (this.deathAnimationTimer / this.deathShakeDuration); // Fade out during shake
+                }
+
 
                 const w = this.width;
                 const h = this.height;
@@ -1702,7 +1985,7 @@
                     ctx.lineTo(w * 0.55, h * 0.7 + mouthOpenness * h);
                     ctx.lineTo(w * 0.6, h * 0.8 + mouthOpenness * h);
                     ctx.lineTo(w * 0.65, h * 0.7 + mouthOpenness * h);
-                    ctx.lineTo(w * 0.7, h * 0.8 + mouthOpenness * h);
+                    ctx.lineTo(w * 0.7, h * 0.8);
                 } else {
                     ctx.moveTo(w * 0.3, h * 0.8);
                     ctx.lineTo(w * 0.35, h * 0.7);
@@ -1721,18 +2004,10 @@
                 ctx.shadowBlur = 0;
                 ctx.shadowColor = 'transparent';
                 ctx.restore();
+                ctx.globalAlpha = 1; // Reset global alpha
 
-                if (this.slamShockwaveRadius > 0) {
-                    ctx.save();
-                    ctx.beginPath();
-                    ctx.arc(this.x + this.width / 2, this.groundY, this.slamShockwaveRadius, 0, Math.PI * 2);
-                    ctx.strokeStyle = `rgba(255, 100, 0, ${1 - (this.slamShockwaveRadius / this.slamShockwaveMaxRadius)})`;
-                    ctx.lineWidth = 5;
-                    ctx.shadowBlur = 20;
-                    ctx.shadowColor = `rgba(255, 100, 0, ${1 - (this.slamShockwaveRadius / this.slamShockwaveMaxRadius)})`;
-                    ctx.stroke();
-                    ctx.restore();
-                }
+                // Draw debris particles (they are drawn relative to their own coordinates, not boss's local)
+                this.debris.forEach(p => p.draw());
             }
         }
 
@@ -2134,8 +2409,11 @@
         }
 
         // --- New: Trains ---
+        // The global `trains` variable is declared with `let` above.
+        // This function now only clears and populates it.
+
         function generateTrains() {
-            trains.length = 0;
+            trains.length = 0; // Clear the array, do not redeclare
             const numTrains = 2;
             for (let i = 0; i < numTrains; i++) {
                 trains.push({
@@ -2220,7 +2498,7 @@
                 if (Math.random() < 0.3) {
                     lightningFlashTimer = lightningMaxDuration;
                 }
-                nextLightningStrike = Math.random() * (lightningMaxDelay - lightningMinDelay) + lightningMinDelay;
+                nextLightningStrike = Math.random() * (lightningMaxDelay - lightningMinDelay) + lightningMaxDelay;
             }
             if (lightningFlashTimer > 0) {
                 lightningFlashTimer -= 1 * gameSpeedMultiplier;
@@ -2265,9 +2543,10 @@
 
             if (limitBreakActive) {
                 limitBreakSlashTimer += 1 * gameSpeedMultiplier;
+
                 if (limitBreakSlashTimer >= limitBreakSlashInterval) {
-                    player.multiSlash();
-                    if (currentLimitBreakSlash < limitBreakSlashCount) {
+                    if (currentLimitBreakSlash < finalSlashTriggerIndex) {
+                        player.multiSlash();
                         currentLimitBreakSlash++;
                         flashCounter = 3;
                         shakeOffset.x = (Math.random() - 0.5) * 10;
@@ -2275,33 +2554,81 @@
                         criticalFlashTimer = 10;
                         limitBreakSlashTimer = 0;
 
-                        // Apply damage to boss during limit break
-                        if (gameBoss.active) {
+                        // Apply damage and juggle to boss during limit break
+                        if (gameBoss && gameBoss.active) { // Added null check for gameBoss
                             const distanceToBoss = Math.abs((player.x + playerW / 2) - (gameBoss.x + gameBoss.width / 2));
                             if (distanceToBoss < 300) {
+                                if (!gameBoss.isJuggled) {
+                                    gameBoss.isJuggled = true;
+                                    gameBoss.juggledDy = -25; // Stronger upward launch for boss
+                                    gameBoss.juggleHits = 0;
+                                } else {
+                                    gameBoss.juggledDy = Math.min(gameBoss.juggledDy, -15); // Ensure it keeps going up
+                                }
+                                gameBoss.juggleHits++;
                                 gameBoss.health -= 5; // Direct damage from limit break
                                 gameBoss.drawGlow = 1;
                                 if (gameBoss.health <= 0) {
-                                    gameBoss.active = false;
-                                    bossHealthBarContainer.style.display = 'none';
-                                    playBossDeathSound();
-                                    winGame();
+                                    gameBoss.isDying = true;
+                                    gameBoss.isJuggled = false;
                                 }
                             }
                         }
-                    } else {
-                        limitBreakActive = false;
-                        limitBreakEffects = false;
-                        currentLimitBreakSlash = 0;
-                        player.speed = 6;
-                        shakeOffset = { x: 0, y: 0 };
-                        gameSpeedMultiplier = 1;
+                    } else if (currentLimitBreakSlash === finalSlashTriggerIndex) {
+                        // Trigger final slash sequence (blackout)
+                        isFinalSlashSequence = true;
+                        finalSlashBlackoutTimer = 0; // Start blackout timer
+                        gameSpeedMultiplier = 0.001; // Almost pause game for blackout
+                        limitBreakSlashTimer = 0; // Pause regular slash timer
+                        criticalTextElement.style.display = 'none'; // Hide critical text during blackout
                     }
                 }
             } else {
                  shakeOffset = { x: 0, y: 0 };
                  flashCounter = 0;
                  // gameSpeedMultiplier is managed by limit break activation/deactivation, not here
+                 enemies.forEach(enemy => {
+                     if (enemy.isJuggled) { // Stop juggling if limit break ends
+                         enemy.isJuggled = false;
+                         enemy.juggledDy = 0;
+                     }
+                 });
+                 if (gameBoss && gameBoss.isJuggled) {
+                     gameBoss.isJuggled = false;
+                     gameBoss.juggledDy = 0;
+                     gameBoss.juggleHits = 0;
+                 }
+            }
+
+            // Handle blackout and SLASHA text (these timers should always advance at normal speed)
+            if (isFinalSlashSequence) {
+                finalSlashBlackoutTimer += 1;
+                if (finalSlashBlackoutTimer >= finalSlashBlackoutDuration) {
+                    // Blackout complete
+                    if (currentLimitBreakSlash === finalSlashTriggerIndex) { // Ensure final slash only triggers once
+                        currentLimitBreakSlash++; // Advance to the "final slash" state
+                        player.multiSlash(); // Execute final slash
+                        slashaTextTimer = slashaTextDuration; // Show SLASHA text
+                        gameSpeedMultiplier = 0.8; // Return to normal game speed
+                        limitBreakActive = false; // End limit break
+                        limitBreakEffects = false;
+                        player.speed = 6; // Reset player speed
+                        shakeOffset = { x: 0, y: 0 };
+                        isFinalSlashSequence = false; // Reset sequence
+                        finalSlashBlackoutTimer = 0; // Reset timer
+                    }
+                }
+            }
+
+            // Update SLASHA text visibility (outside gameSpeedMultiplier controlled block)
+            if (slashaTextTimer > 0) {
+                slashaTextTimer -= 1; // This timer should always decrement at normal speed
+                slashaTextElement.style.display = 'block';
+                slashaTextElement.style.opacity = '1';
+                if (slashaTextTimer <= 0) {
+                    slashaTextElement.style.opacity = '0';
+                    setTimeout(() => slashaTextElement.style.display = 'none', 300); // Fade out
+                }
             }
 
 
@@ -2390,7 +2717,7 @@
                     enemy.update();
 
                     if (enemy.active) {
-                        if (!limitBreakActive &&
+                        if (!limitBreakActive && // Only take damage from direct contact if not in limit break
                             player.x < enemy.x + enemy.width &&
                             player.x + playerW > enemy.x &&
                             player.y < enemy.y + enemy.height &&
@@ -2399,8 +2726,11 @@
                             player.glowIntensity = 1;
                             player.sizeMultiplier -= 0.05;
                             if (player.sizeMultiplier < 0.5) player.sizeMultiplier = 0.5;
-                            enemy.active = false;
+                            enemy.health -= 5; // Damage from collision
                             enemy.drawGlow = 1;
+                            if (enemy.health <= 0) {
+                                enemy.isDying = true;
+                            }
                             playDamageSound();
                         }
 
@@ -2410,17 +2740,34 @@
                             player.hitboxOffsetY < enemy.y + enemy.height &&
                             player.hitboxOffsetY + player.hitboxHeight > enemy.y
                         ) {
-                            if (enemy.active) {
-                                enemy.active = false;
+                            if (enemy.active && !limitBreakActive) { // Regular slash damage
+                                enemy.health -= 10;
                                 enemy.drawGlow = 1;
+                                if (enemy.health <= 0) {
+                                    enemy.isDying = true;
+                                }
                                 if (limitBreakCharge < maxLimitBreakCharge) {
                                     limitBreakCharge += 20;
                                     if (limitBreakCharge > maxLimitBreakCharge) limitBreakCharge = maxLimitBreakCharge;
                                 }
+                            } else if (limitBreakActive && enemy.active) { // Limit Break juggle hit
+                                if (!enemy.isJuggled) {
+                                    enemy.isJuggled = true;
+                                    enemy.juggledDy = -20; // Strong upward launch
+                                    enemy.juggleHits = 0;
+                                } else {
+                                    enemy.juggledDy = Math.min(enemy.juggledDy, -10); // Ensure it keeps going up
+                                }
+                                enemy.juggleHits++;
+                                enemy.health -= 5; // Smaller damage per juggle hit
+                                enemy.drawGlow = 1;
+                                if (enemy.health <= 0) {
+                                    enemy.isDying = true;
+                                }
                             }
                         }
                     }
-                    if (enemy.active || enemy.drawGlow > 0) {
+                    if (enemy.active || enemy.isDying || enemy.fireParticles.length > 0) { // Keep enemy active if still drawing fire
                         activeEnemies.push(enemy);
                     }
                 });
@@ -2450,7 +2797,7 @@
                         // Collision for beam projectiles
                         else if (p.isPlayerBeam) {
                             // Beam hits boss
-                            if (gameBoss.active &&
+                            if (gameBoss && gameBoss.active && // Added null check for gameBoss
                                 p.x < gameBoss.x + gameBoss.width &&
                                 p.x + p.width > gameBoss.x && // Use p.width for beam
                                 p.y < gameBoss.y + gameBoss.height &&
@@ -2460,10 +2807,9 @@
                                 gameBoss.drawGlow = 1;
                                 p.active = false; // Beam disappears on hit
                                 if (gameBoss.health <= 0) {
-                                    gameBoss.active = false;
+                                    gameBoss.isDying = true;
+                                    gameBoss.active = false; // Set active to false immediately for boss death
                                     bossHealthBarContainer.style.display = 'none';
-                                    playBossDeathSound();
-                                    winGame();
                                 }
                             }
                             // Beam hits enemies
@@ -2474,9 +2820,12 @@
                                     p.y < enemy.y + enemy.height &&
                                     p.y + p.height > enemy.y // Use p.height for beam
                                 ) {
-                                    enemy.active = false; // Instantly destroy enemy
+                                    enemy.health -= beamDamage; // Damage enemy
                                     enemy.drawGlow = 1;
                                     p.active = false; // Beam disappears on hit
+                                    if (enemy.health <= 0) {
+                                        enemy.isDying = true;
+                                    }
                                 }
                             });
                             // If beam goes off-screen, deactivate it
@@ -2502,13 +2851,13 @@
 
 
                 const allCollectiblesCollected = collectibles.every(item => !item.active);
-                if (allCollectiblesCollected && !gameBoss.active) {
-                    gameBoss.active = true;
+                // Fix for boss respawn: Only activate boss if it's null (meaning it was defeated and removed)
+                if (allCollectiblesCollected && gameBoss && !gameBoss.active && !gameBoss.isDying) { // Check if boss object exists but is not active/dying
+                    gameBoss.active = true; // Activate existing boss instance
                     bossHealthBarContainer.style.display = 'block';
-                    console.log("Boss Activated!");
                 }
 
-                if (gameBoss.active) {
+                if (gameBoss && (gameBoss.active || gameBoss.isDying || gameBoss.debris.length > 0)) { // Also update if dying for animation
                     gameBoss.update();
                      bossHealthBar.style.width = `${(gameBoss.health / gameBoss.maxHealth) * 100}%`;
 
@@ -2518,19 +2867,24 @@
                         player.hitboxOffsetY < gameBoss.y + gameBoss.height &&
                         player.hitboxOffsetY + player.hitboxHeight > gameBoss.y
                     ) {
-                        if (gameBoss.health > 0) {
-                            // Regular slash damage (Limit break damage is handled in its own block)
+                        if (gameBoss.active && !limitBreakActive) { // Regular slash damage
                             gameBoss.health -= 1;
                             gameBoss.drawGlow = 1;
                             if (gameBoss.health <= 0) {
+                                gameBoss.isDying = true;
                                 gameBoss.active = false;
                                 bossHealthBarContainer.style.display = 'none';
-                                playBossDeathSound();
-                                winGame();
                             }
                         }
                     }
+                    // If boss is fully dead and its death animation/debris are gone, set gameBoss to null
+                    if (!gameBoss.active && !gameBoss.isDying && gameBoss.debris.length === 0) {
+                        gameBoss = null;
+                        winGame(); // Call winGame when boss is truly defeated
+                    }
                 } else if (player.x + playerW > flag.x && !isGameWon && !allCollectiblesCollected) {
+                    // This block is for reaching the flag without collecting all collectibles.
+                    // If boss is active, the flag is not the win condition.
                 }
             }
 
@@ -2569,7 +2923,7 @@
             }
 
             collectiblesLeftDisplay.textContent = collectibles.filter(item => item.active).length;
-            bossActiveDisplay.textContent = gameBoss.active ? 'YES' : 'NO';
+            bossActiveDisplay.textContent = gameBoss ? (gameBoss.active ? 'YES' : 'NO') : 'NO (Defeated)'; // Updated display
 
             if (criticalFlashTimer > 0) {
                 criticalFlashTimer -= 1 * gameSpeedMultiplier;
@@ -2598,9 +2952,21 @@
                 currentLimitBreakSlash = 0;
                 limitBreakSlashTimer = 0;
                 player.speed = 15;
-                gameSpeedMultiplier = 0.3;
+                gameSpeedMultiplier = 0.2; // Set to slow-motion
                 flashCounter = 10;
                 playWhooshSound();
+
+                // Reset juggle states for all entities when Limit Break starts
+                enemies.forEach(enemy => {
+                    enemy.isJuggled = false;
+                    enemy.juggledDy = 0;
+                    enemy.juggleHits = 0;
+                });
+                if (gameBoss) {
+                    gameBoss.isJuggled = false;
+                    gameBoss.juggledDy = 0;
+                    gameBoss.juggleHits = 0;
+                }
             }
         }
 
@@ -2623,6 +2989,7 @@
 
             const uniformScale = Math.min(canvas.width / gameWorld.width, canvas.height / gameWorld.height);
 
+            // Apply global shake offset (for limit break)
             ctx.translate(shakeOffset.x, shakeOffset.y);
 
             ctx.scale(uniformScale, uniformScale);
@@ -2717,7 +3084,7 @@
             });
 
             flag.draw();
-            if (gameBoss.active || gameBoss.drawGlow > 0) {
+            if (gameBoss && (gameBoss.active || gameBoss.isDying || gameBoss.debris.length > 0)) { // Draw boss if active, dying, or still has debris
                 gameBoss.draw();
             }
 
@@ -2735,6 +3102,12 @@
                 ctx.fillRect(camera.x, camera.y, gameWorld.width, gameWorld.height);
             }
 
+            // Draw black screen for final slash windup
+            if (finalSlashBlackoutTimer > 0) {
+                const blackoutAlpha = finalSlashBlackoutTimer / finalSlashBlackoutDuration;
+                ctx.fillStyle = `rgba(0, 0, 0, ${blackoutAlpha})`;
+                ctx.fillRect(camera.x, camera.y, gameWorld.width, gameWorld.height);
+            }
 
             ctx.restore();
         }
@@ -2810,7 +3183,7 @@
             introScreen.style.display = 'none';
             gameStarted = true;
             isGameWon = false;
-            gameSpeedMultiplier = 1;
+            gameSpeedMultiplier = 0.8; // Reset to default slower speed
 
             player.x = 100;
             player.sizeMultiplier = 1;
@@ -2831,6 +3204,13 @@
             shakeOffset = { x: 0, y: 0 };
             criticalFlashTimer = 0;
 
+            isFinalSlashSequence = false;
+            finalSlashBlackoutTimer = 0;
+            slashaTextTimer = 0;
+            slashaTextElement.style.display = 'none';
+            slashaTextElement.style.opacity = '0';
+
+
             isChargingAttack = false; // Reset charging state
             chargeTime = 0; // Reset charge time
 
@@ -2849,7 +3229,15 @@
             generateTrains();
             generatePlatforms();
 
-            gameBoss = new Boss();
+            // Initialize a new boss if it's null (meaning it was defeated in a previous game session)
+            // Or if it exists but is not active (meaning it's the start of a new game)
+            if (gameBoss === null || (!gameBoss.active && !gameBoss.isDying)) {
+                gameBoss = new Boss();
+            }
+            gameBoss.active = false; // Ensure boss is not active at start of new game until collectibles are met
+            gameBoss.health = gameBoss.maxHealth; // Reset boss health
+            gameBoss.isDying = false; // Reset dying state
+            gameBoss.debris = []; // Clear any lingering debris
             bossHealthBarContainer.style.display = 'none';
 
 
@@ -2880,11 +3268,10 @@
         calculateBuildingLayerWidths();
         generateTrains();
         generatePlatforms();
-        gameBoss = new Boss();
+        gameBoss = new Boss(); // Initialize boss for first load
         initAudio();
         resizeCanvas();
         draw();
-        requestAnimationFrame(update);
     </script>
 </body>
 </html>
