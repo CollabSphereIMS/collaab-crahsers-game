@@ -54,7 +54,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.95);
+            background-color: rgba(0, 0, 0, 0.7); /* Changed to semi-transparent */
             color: white;
             display: flex;
             flex-direction: column;
@@ -523,8 +523,7 @@
 
         // Function to generate a "whoosh" sound for Limit Break
         function playWhooshSound(duration = 0.2, startFreq = 2000, endFreq = 500, volume = 0.7) {
-            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
+            // Removed lazy audioContext initialization here. Assumes audioContext is initialized.
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
 
@@ -544,8 +543,7 @@
 
         // Function to generate a "giggle" sound for Boss Laugh
         function playGiggleSound(duration = 0.5, volume = 0.4) {
-            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
+            // Removed lazy audioContext initialization here. Assumes audioContext is initialized.
             const primaryOsc = audioContext.createOscillator();
             const secondaryOsc = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
@@ -585,7 +583,7 @@
 
         // New: Function to generate a slashing sound
         function playSlashSound(duration = 0.1, freq = 1500, volume = 0.6) {
-            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            // Removed lazy audioContext initialization here. Assumes audioContext is initialized.
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
 
@@ -605,7 +603,7 @@
 
         // New: Function to generate a damage sound
         function playJumpSound(duration = 0.15, freq = 800, volume = 0.5) {
-            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            // Removed lazy audioContext initialization here. Assumes audioContext is initialized.
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
             oscillator.connect(gainNode);
@@ -620,7 +618,7 @@
         }
 
         function playDamageSound(duration = 0.2, freq = 100, volume = 0.8) {
-            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            // Removed lazy audioContext initialization here. Assumes audioContext is initialized.
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
 
@@ -640,8 +638,7 @@
 
         // New: Function to generate a boss death sound
         function playBossDeathSound(duration = 1.0, startFreq = 80, endFreq = 20, volume = 0.8) {
-            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
+            // Removed lazy audioContext initialization here. Assumes audioContext is initialized.
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
 
@@ -661,7 +658,7 @@
 
         // New: Function to generate a meteorite impact sound
         function playMeteoriteImpactSound(duration = 0.3, freq = 60, volume = 1.0) {
-            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            // Removed lazy audioContext initialization here. Assumes audioContext is initialized.
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
             oscillator.connect(gainNode);
@@ -680,7 +677,7 @@
 
         // New: Function to generate a ground slam sound
         function playGroundSlamSound(duration = 0.4, startFreq = 120, endFreq = 30, volume = 0.9) {
-            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            // Removed lazy audioContext initialization here. Assumes audioContext is initialized.
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
             oscillator.connect(gainNode);
@@ -699,7 +696,7 @@
 
         // New: Function to generate a teleport sound
         function playTeleportSound(duration = 0.2, startFreq = 800, endFreq = 1200, volume = 0.6) {
-            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            // Removed lazy audioContext initialization here. Assumes audioContext is initialized.
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
             oscillator.connect(gainNode);
@@ -718,7 +715,7 @@
 
         // New: Function to generate a charged beam sound
         function playChargedBeamSound(duration = 0.5, startFreq = 500, endFreq = 100, volume = 1.0) {
-            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            // Removed lazy audioContext initialization here. Assumes audioContext is initialized.
             const oscillator = audioContext.createOscillator();
             const gainNode = audioContext.createGain();
             oscillator.connect(gainNode);
@@ -735,9 +732,31 @@
             oscillator.stop(audioContext.currentTime + duration);
         }
 
+        // New: Function to generate a twinkling sound
+        function playTwinkleSound(duration = 0.1, startFreq = 2000, endFreq = 4000, volume = 0.2) {
+            // Removed lazy audioContext initialization here. Assumes audioContext is initialized.
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.type = 'triangle'; // Crisp, bell-like sound
+            oscillator.frequency.setValueAtTime(startFreq, audioContext.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(endFreq, audioContext.currentTime + duration);
+
+            gainNode.gain.setValueAtTime(volume, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
 
         async function initAudio() {
-            // AudioContext is initialized on first sound playback.
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
             console.log('Audio initialization complete. Sounds are ready to be played directly.');
         }
 
@@ -778,6 +797,8 @@
             generateBuildings();
             calculateBuildingLayerWidths();
             generateTrains();
+            // Recreate stars on resize to fit new canvas dimensions
+            createIntroStars();
         }
         window.addEventListener('resize', resizeCanvas);
 
@@ -2471,10 +2492,73 @@
             });
         }
 
+        // --- Stars for Intro Screen ---
+        const introStars = [];
+        const maxIntroStars = 100;
+
+        function createIntroStars() {
+            introStars.length = 0;
+            for (let i = 0; i < maxIntroStars; i++) {
+                introStars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    size: 1 + Math.random() * 3,
+                    opacity: 0.5 + Math.random() * 0.5,
+                    dy: 0.5 + Math.random() * 1.5, // Falling speed
+                    twinklePhase: Math.random() * Math.PI * 2 // For twinkling effect
+                });
+            }
+        }
+
+        function updateIntroStars() {
+            for (let i = introStars.length - 1; i >= 0; i--) {
+                const star = introStars[i];
+                star.y += star.dy;
+                star.twinklePhase += 0.05; // Twinkle speed
+
+                if (star.y > canvas.height) {
+                    // Reset star to top when it falls off screen
+                    star.x = Math.random() * canvas.width;
+                    star.y = -star.size;
+                    star.opacity = 0.5 + Math.random() * 0.5;
+                    star.dy = 0.5 + Math.random() * 1.5;
+                    star.twinklePhase = Math.random() * Math.PI * 2;
+                }
+            }
+        }
+
+        function drawIntroStars() {
+            ctx.save();
+            ctx.globalAlpha = 1; // Ensure full opacity for stars initially
+
+            for (let i = 0; i < introStars.length; i++) {
+                const star = introStars[i];
+                const currentOpacity = star.opacity * (0.5 + 0.5 * Math.sin(star.twinklePhase)); // Twinkling effect
+                ctx.fillStyle = `rgba(255, 255, 200, ${currentOpacity})`; // Yellowish white
+                ctx.shadowBlur = star.size * 2;
+                ctx.shadowColor = `rgba(255, 255, 200, ${currentOpacity})`;
+                ctx.beginPath();
+                ctx.arc(star.x, star.y, star.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.shadowBlur = 0;
+            ctx.restore();
+        }
+
+        let twinkleSoundTimer = 0;
+        const twinkleSoundInterval = 60; // Play a twinkle sound every 60 frames (1 second)
 
         // --- Game Logic ---
         function update() {
             if (!gameStarted) {
+                // Update intro screen elements
+                updateIntroStars();
+                twinkleSoundTimer++;
+                if (twinkleSoundTimer >= twinkleSoundInterval) {
+                    playTwinkleSound();
+                    twinkleSoundTimer = 0;
+                }
+                draw(); // Redraw to show stars
                 requestAnimationFrame(update);
                 return;
             }
@@ -2851,9 +2935,9 @@
 
 
                 const allCollectiblesCollected = collectibles.every(item => !item.active);
-                // Fix for boss respawn: Only activate boss if it's null (meaning it was defeated and removed)
-                if (allCollectiblesCollected && gameBoss && !gameBoss.active && !gameBoss.isDying) { // Check if boss object exists but is not active/dying
-                    gameBoss.active = true; // Activate existing boss instance
+                // Activate boss if all collectibles are collected and boss is not already active or dying
+                if (allCollectiblesCollected && gameBoss && !gameBoss.active && !gameBoss.isDying) {
+                    gameBoss.active = true;
                     bossHealthBarContainer.style.display = 'block';
                 }
 
@@ -2992,48 +3076,65 @@
             // Apply global shake offset (for limit break)
             ctx.translate(shakeOffset.x, shakeOffset.y);
 
-            ctx.scale(uniformScale, uniformScale);
-            ctx.translate(-camera.x, -camera.y);
-
-            const timeRatio = gameTime / cycleDuration;
-            let topColor, bottomColor;
-
-            const hue = 220;
-            const saturation = 50;
-
-            const sunriseHue = 40;
-            const sunriseSaturation = 80;
-            const sunriseTopLightness = 95;
-            const sunriseBottomLightness = 70;
-
-            let currentLightness;
-
-            if (timeRatio >= sunriseStartRatio && timeRatio < sunriseEndRatio) {
-                const sunriseProgress = (timeRatio - sunriseStartRatio) / (sunriseEndRatio - sunriseStartRatio);
-                const nightToSunriseTopL = (Math.sin((timeRatio - 0.75) * Math.PI * 2) * 0.5 + 0.5) * (80 - 10) + 10;
-                const nightToSunriseBottomL = (Math.sin((timeRatio - 0.75) * Math.PI * 2) * 0.5 + 0.5) * (100 - 10) + 10;
-
-                topColor = hslToHex(
-                    hue + (sunriseHue - hue) * sunriseProgress,
-                    saturation + (sunriseSaturation - saturation) * sunriseProgress,
-                    nightToSunriseTopL + (sunriseTopLightness - nightToSunriseTopL) * sunriseProgress
-                );
-                bottomColor = hslToHex(
-                    hue + (sunriseHue - hue) * sunriseProgress,
-                    saturation + (sunriseSaturation - saturation) * sunriseProgress,
-                    nightToSunriseBottomL + (sunriseBottomLightness - nightToSunriseBottomL) * sunriseProgress
-                );
+            // Only apply camera translation if game has started
+            if (gameStarted) {
+                ctx.scale(uniformScale, uniformScale);
+                ctx.translate(-camera.x, -camera.y);
             } else {
-                currentLightness = (Math.sin(timeRatio * Math.PI * 2) * 0.5 + 0.5) * (80 - 10) + 10;
-                topColor = hslToHex(hue, saturation, currentLightness);
-                bottomColor = hslToHex(hue, saturation + 20, currentLightness - 10);
+                // For intro screen, scale to fit but no camera translation
+                ctx.scale(uniformScale, uniformScale);
             }
 
-            const gradient = ctx.createLinearGradient(0, camera.y, 0, camera.y + gameWorld.height);
-            gradient.addColorStop(0, topColor);
-            gradient.addColorStop(1, bottomColor);
-            ctx.fillStyle = gradient;
-            ctx.fillRect(camera.x, camera.y, gameWorld.width, gameWorld.height);
+            // Define timeRatio at the top of the draw function so it's always available
+            const timeRatio = gameTime / cycleDuration;
+
+            // Handle background fill based on game state
+            if (!gameStarted) {
+                // Intro screen: solid dark background for stars
+                ctx.fillStyle = '#000000'; // Black background
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            } else {
+                // Game started: day-night cycle gradient
+                let topColor, bottomColor;
+
+                const hue = 220;
+                const saturation = 50;
+
+                const sunriseHue = 40;
+                const sunriseSaturation = 80;
+                const sunriseTopLightness = 95;
+                const sunriseBottomLightness = 70;
+
+                let currentLightness;
+
+                if (timeRatio >= sunriseStartRatio && timeRatio < sunriseEndRatio) {
+                    const sunriseProgress = (timeRatio - sunriseStartRatio) / (sunriseEndRatio - sunriseStartRatio);
+                    const nightToSunriseTopL = (Math.sin((timeRatio - 0.75) * Math.PI * 2) * 0.5 + 0.5) * (80 - 10) + 10;
+                    const nightToSunriseBottomL = (Math.sin((timeRatio - 0.75) * Math.PI * 2) * 0.5 + 0.5) * (100 - 10) + 10;
+
+                    topColor = hslToHex(
+                        hue + (sunriseHue - hue) * sunriseProgress,
+                        saturation + (sunriseSaturation - saturation) * sunriseProgress,
+                        nightToSunriseTopL + (sunriseTopLightness - nightToSunriseTopL) * sunriseProgress
+                    );
+                    bottomColor = hslToHex(
+                        hue + (sunriseHue - hue) * sunriseProgress,
+                        saturation + (sunriseSaturation - saturation) * sunriseProgress,
+                        nightToSunriseBottomL + (sunriseBottomLightness - nightToSunriseBottomL) * sunriseProgress
+                    );
+                } else {
+                    currentLightness = (Math.sin(timeRatio * Math.PI * 2) * 0.5 + 0.5) * (80 - 10) + 10;
+                    topColor = hslToHex(hue, saturation, currentLightness);
+                    bottomColor = hslToHex(hue, saturation + 20, currentLightness - 10);
+                }
+
+                const gradient = ctx.createLinearGradient(0, camera.y, 0, camera.y + gameWorld.height);
+                gradient.addColorStop(0, topColor);
+                gradient.addColorStop(1, bottomColor);
+                ctx.fillStyle = gradient;
+                ctx.fillRect(camera.x, camera.y, gameWorld.width, gameWorld.height);
+            }
+
 
             if (blindingLightTimer > 0) {
                 ctx.fillStyle = `rgba(255, 255, 255, ${blindingLightTimer / blindingLightDuration})`;
@@ -3045,68 +3146,76 @@
                 ctx.fillRect(camera.x, camera.y, gameWorld.width, gameWorld.height);
             }
 
+            // Draw intro stars only if game has not started
+            if (!gameStarted) {
+                drawIntroStars();
+            }
 
-            drawBuildings();
-            drawTrains();
+            // Only draw game elements if game has started
+            if (gameStarted) {
+                drawBuildings();
+                drawTrains();
 
-            const terrainColors = ['#006400', '#228B22', '#3CB371', '#6B8E23'];
-            const terrainOffsets = [0, 5, 10, 15];
+                const terrainColors = ['#006400', '#228B22', '#3CB371', '#6B8E23'];
+                const terrainOffsets = [0, 5, 10, 15];
 
-            for (let layer = terrainColors.length - 1; layer >= 0; layer--) {
-                ctx.fillStyle = terrainColors[layer];
-                ctx.beginPath();
-                ctx.moveTo(0, gameWorld.height);
-                for (let i = 0; i < terrain.length; i++) {
-                    ctx.lineTo(i * terrainSegmentLength, terrain[i] + terrainOffsets[layer]);
+                for (let layer = terrainColors.length - 1; layer >= 0; layer--) {
+                    ctx.fillStyle = terrainColors[layer];
+                    ctx.beginPath();
+                    ctx.moveTo(0, gameWorld.height);
+                    for (let i = 0; i < terrain.length; i++) {
+                        ctx.lineTo(i * terrainSegmentLength, terrain[i] + terrainOffsets[layer]);
+                    }
+                    ctx.lineTo(worldWidth, gameWorld.height);
+                    ctx.closePath();
+                    ctx.fill();
                 }
-                ctx.lineTo(worldWidth, gameWorld.height);
-                ctx.closePath();
-                ctx.fill();
-            }
 
-            drawRainSplashes();
+                drawRainSplashes();
 
-            enemies.forEach(enemy => enemy.draw());
+                enemies.forEach(enemy => enemy.draw());
 
-            projectiles.forEach(p => p.draw());
+                projectiles.forEach(p => p.draw());
 
-            meteorites.forEach(m => m.draw());
+                meteorites.forEach(m => m.draw());
 
-            collectibles.forEach(item => {
-                if (item.active) {
-                    const currentLightness = (Math.sin(timeRatio * Math.PI * 2) * 0.5 + 0.5) * (80 - 10) + 10;
-                    const nightOverlayAlpha = 0.5 - (currentLightness / 80) * 0.5;
-                    ctx.save();
-                    ctx.globalAlpha = 1 - nightOverlayAlpha;
-                    item.draw(item.x, item.y, item.size);
-                    ctx.restore();
+                collectibles.forEach(item => {
+                    if (item.active) {
+                        // currentLightness is only defined if gameStarted is true, but timeRatio is now always defined
+                        const currentLightness = (Math.sin(timeRatio * Math.PI * 2) * 0.5 + 0.5) * (80 - 10) + 10;
+                        const nightOverlayAlpha = 0.5 - (currentLightness / 80) * 0.5;
+                        ctx.save();
+                        ctx.globalAlpha = 1 - nightOverlayAlpha;
+                        item.draw(item.x, item.y, item.size);
+                        ctx.restore();
+                    }
+                });
+
+                flag.draw();
+                if (gameBoss && (gameBoss.active || gameBoss.isDying || gameBoss.debris.length > 0)) { // Draw boss if active, dying, or still has debris
+                    gameBoss.draw();
                 }
-            });
 
-            flag.draw();
-            if (gameBoss && (gameBoss.active || gameBoss.isDying || gameBoss.debris.length > 0)) { // Draw boss if active, dying, or still has debris
-                gameBoss.draw();
-            }
+                player.draw();
 
-            player.draw();
+                if (limitBreakEffects) {
+                    drawLimitBreakEffects();
+                }
 
-            if (limitBreakEffects) {
-                drawLimitBreakEffects();
-            }
+                drawRain();
 
-            drawRain();
+                if (redHueTimer > 0) {
+                    const redAlpha = redHueTimer / redHueDuration * 0.5;
+                    ctx.fillStyle = `rgba(255, 0, 0, ${redAlpha})`;
+                    ctx.fillRect(camera.x, camera.y, gameWorld.width, gameWorld.height);
+                }
 
-            if (redHueTimer > 0) {
-                const redAlpha = redHueTimer / redHueDuration * 0.5;
-                ctx.fillStyle = `rgba(255, 0, 0, ${redAlpha})`;
-                ctx.fillRect(camera.x, camera.y, gameWorld.width, gameWorld.height);
-            }
-
-            // Draw black screen for final slash windup
-            if (finalSlashBlackoutTimer > 0) {
-                const blackoutAlpha = finalSlashBlackoutTimer / finalSlashBlackoutDuration;
-                ctx.fillStyle = `rgba(0, 0, 0, ${blackoutAlpha})`;
-                ctx.fillRect(camera.x, camera.y, gameWorld.width, gameWorld.height);
+                // Draw black screen for final slash windup
+                if (finalSlashBlackoutTimer > 0) {
+                    const blackoutAlpha = finalSlashBlackoutTimer / finalSlashBlackoutDuration;
+                    ctx.fillStyle = `rgba(0, 0, 0, ${blackoutAlpha})`;
+                    ctx.fillRect(camera.x, camera.y, gameWorld.width, gameWorld.height);
+                }
             }
 
             ctx.restore();
@@ -3185,6 +3294,13 @@
             isGameWon = false;
             gameSpeedMultiplier = 0.8; // Reset to default slower speed
 
+            // Resume audio context on user interaction
+            if (audioContext && audioContext.state === 'suspended') {
+                audioContext.resume().then(() => {
+                    console.log('AudioContext resumed successfully.');
+                }).catch(e => console.error('Error resuming AudioContext:', e));
+            }
+
             player.x = 100;
             player.sizeMultiplier = 1;
             player.glowIntensity = 0;
@@ -3241,8 +3357,8 @@
             bossHealthBarContainer.style.display = 'none';
 
 
-            initAudio();
-            resizeCanvas();
+            initAudio(); // Ensure audio context is created
+            resizeCanvas(); // Re-adjust canvas size
             requestAnimationFrame(update);
 
             gameTipBox.style.display = 'block';
@@ -3269,9 +3385,11 @@
         generateTrains();
         generatePlatforms();
         gameBoss = new Boss(); // Initialize boss for first load
-        initAudio();
+        initAudio(); // Initialize audio context on page load
         resizeCanvas();
-        draw();
+        createIntroStars(); // Initialize intro stars
+        // The update loop will handle drawing the stars on the intro screen
+        requestAnimationFrame(update); // Start the update loop immediately for intro screen animations
     </script>
 </body>
 </html>
